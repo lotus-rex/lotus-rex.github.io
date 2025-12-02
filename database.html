@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <title>Database Aman</title>
+</head>
+
+<body>
+    <div id="database-container">
+        <h1>Database Aman</h1>
+
+        <div class="flex border-b border-gray-200" id="database-tabs">
+            <button data-db-tab="metadata" class="db-tab-button" onclick="changeDbTab('metadata')">Metadata</button>
+            <button data-db-tab="income" class="db-tab-button" onclick="changeDbTab('income')">Income</button>
+            <button data-db-tab="notes" class="db-tab-button" onclick="changeDbTab('notes')">Notes</button>
+            <button onclick="handleLogout()" style="margin-left: auto;">Logout</button>
+        </div>
+
+        <div id="db-content-area" class="mt-4">
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script>
+        // database.js
+        // --- 1. Definisi Konten Tab ---
+        const DB_METADATA_CONTENT = '<h2>Metadata Proyek</h2><p>Informasi konfigurasi dan status.</p>';
+        const DB_INCOME_CONTENT = '<h2>Laporan Income</h2><p>Data keuangan dari Supabase.</p>';
+        const DB_NOTES_CONTENT = '<h2>Catatan Pribadi</h2><p>Daftar catatan penting.</p>';
+
+        // --- 2. Navigasi Tab Internal ---
+        function changeDbTab(tabName) {
+            const contentArea = document.getElementById('db-content-area');
+            const tabButtons = document.querySelectorAll('.db-tab-button');
+
+            // Toggle class aktif
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active'); // Ganti dengan class TailwindCSS aktif Anda
+                if (btn.getAttribute('data-db-tab') === tabName) {
+                    btn.classList.add('active'); // Ganti dengan class TailwindCSS aktif Anda
+                }
+            });
+
+            // Muat konten
+            switch (tabName) {
+                case 'metadata':
+                    contentArea.innerHTML = DB_METADATA_CONTENT;
+                    break;
+                case 'income':
+                    contentArea.innerHTML = DB_INCOME_CONTENT;
+                    break;
+                case 'notes':
+                    contentArea.innerHTML = DB_NOTES_CONTENT;
+                    break;
+                default:
+                    contentArea.innerHTML = DB_METADATA_CONTENT; // Default
+                    tabName = 'metadata';
+                    break;
+            }
+
+            // Update URL sub-halaman (misal: database.html?tab=income)
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('tab', tabName);
+            history.pushState(null, '', currentUrl.toString());
+        }
+
+        // --- 3. Autentikasi dan Inisialisasi ---
+        async function handleLogout() {
+            await supabase.auth.signOut();
+            window.location.href = './login.html';
+        }
+
+        async function initDatabasePage() {
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session) {
+                // Jika tidak ada sesi, redirect kembali ke login
+                window.location.href = './login.html';
+                return;
+            }
+
+            // Jika sesi valid, muat tab
+            const params = new URLSearchParams(window.location.search);
+            const tabNameFromUrl = params.get('tab');
+
+            // Muat tab dari URL atau default
+            changeDbTab(tabNameFromUrl || 'metadata');
+        }
+
+        document.addEventListener('DOMContentLoaded', initDatabasePage);
+    </script>
+</body>
+
+</html>

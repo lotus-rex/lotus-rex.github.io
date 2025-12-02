@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akses Database - Login</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#4f46e5', // Indigo-600
+                        'primary-dark': '#4338ca', // Indigo-700
+                    }
+                }
+            }
+        }
+    </script>
+    
+</head>
+
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+
+    <div id="login-container" 
+         class="bg-white p-8 md:p-10 rounded-xl shadow-2xl w-full max-w-md 
+                border border-gray-100 transform transition-all duration-300">
+
+        <div class="text-center mb-8">
+            <svg class="w-12 h-12 mx-auto text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10m0 0h16m0 0V7m0 10l-4-4m4 4l-4-4m-4-4l-4 4"></path></svg>
+            <h1 class="text-3xl font-extrabold text-gray-900 mt-3">Akses Database</h1>
+            <p class="text-gray-500 mt-1">Masuk untuk melanjutkan ke data sensitif.</p>
+        </div>
+
+        <div class="space-y-5">
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700">Alamat Email</label>
+                <input type="email" id="email" placeholder="contoh@domain.com" required
+                       class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg 
+                              shadow-sm focus:outline-none focus:ring-primary focus:border-primary transition duration-150">
+            </div>
+            
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">Kata Sandi</label>
+                <input type="password" id="password" placeholder="••••••••" required
+                       class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg 
+                              shadow-sm focus:outline-none focus:ring-primary focus:border-primary transition duration-150">
+            </div>
+            
+            <p id="error-message" class="text-sm font-medium pt-2 text-red-600"></p>
+
+            <button onclick="handleLogin()"
+                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg 
+                           shadow-md text-base font-semibold text-white bg-primary hover:bg-primary-dark 
+                           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-200 ease-in-out">
+                Login
+            </button>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script>
+        // login.js
+        async function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = '';
+
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                errorMessage.textContent = 'Login Gagal: ' + error.message;
+            } else {
+                // Jika login berhasil, redirect ke halaman database
+                window.location.href = './database.html';
+            }
+        }
+
+        // Cek sesi saat halaman dimuat
+        async function checkSession() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                // Jika sudah login, langsung redirect ke database
+                window.location.href = './database.html';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', checkSession);
+    </script>
+</body>
+
+</html>
