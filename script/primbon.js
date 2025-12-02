@@ -386,15 +386,15 @@ const PRIMBON_PINDAH_RUMAH_CONTENT = `
         </div>
 `;
 
-const PRIMBON_CARI_TANGGAL_CONTENT = (function() {
+const PRIMBON_CARI_TANGGAL_CONTENT = (function () {
     const hariOptions = HARI_SE_MINGGU.map(h => `<option value="${h}">${h}</option>`).join('');
     const pasaranOptions = JAVANESE_PASARAN.map(p => `<option value="${p}">${p}</option>`).join('');
-    
+
     const today = new Date();
     // Format YYYY-MM untuk input 'month'
     const defaultMonthYear = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`;
     const defaultYear = today.getFullYear();
-    
+
     return `
         <h3 class="text-xl font-semibold mb-4 text-red-700">Cari Tanggal Berdasarkan Weton</h3>
         <p class="text-sm text-gray-600 mb-4">Temukan semua tanggal yang cocok dengan Weton pilihan Anda dalam rentang waktu tertentu.</p>
@@ -487,14 +487,14 @@ function cariTanggalWeton() {
 
     let startDate, endDate;
     let valid = true;
-    
+
     // Tentukan rentang pencarian
     if (rentangPilihan === 'bulan') {
         const bulanTahunInput = document.getElementById('inputBulanTahun').value;
         const [yearStr, monthStr] = bulanTahunInput.split('-');
         const year = parseInt(yearStr);
         const month = parseInt(monthStr);
-        
+
         if (isNaN(year) || isNaN(month)) {
             alert("Format Bulan dan Tahun tidak valid.");
             valid = false;
@@ -502,13 +502,13 @@ function cariTanggalWeton() {
             // Bulan di JS 0-indexed (Januari=0), input month HTML 1-indexed
             startDate = new Date(year, month - 1, 1);
             // Hari ke-0 dari bulan berikutnya = hari terakhir bulan ini
-            endDate = new Date(year, month, 0); 
+            endDate = new Date(year, month, 0);
         }
     } else if (rentangPilihan === 'tahun') {
         const tahunInput = document.getElementById('inputTahun').value;
         const year = parseInt(tahunInput);
-        
-        if (isNaN(year)) { 
+
+        if (isNaN(year)) {
             alert("Input Tahun tidak valid.");
             valid = false;
         } else {
@@ -518,7 +518,7 @@ function cariTanggalWeton() {
     }
 
     if (!valid) return;
-    
+
     // Lakukan Pencarian
     const matchingDates = findMatchingDates(targetDay, targetPasaran, startDate, endDate);
 
@@ -529,21 +529,21 @@ function cariTanggalWeton() {
     if (matchingDates.length > 0) {
         const startFormatted = startDate.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
         const endFormatted = endDate.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
-        
+
         outputHTML += `<p class="text-lg font-medium text-green-700 mb-3">Ditemukan <b class="text-green-900">${matchingDates.length}</b> tanggal dengan Weton <b class="text-green-900">${targetDay} ${targetPasaran}</b> antara ${startFormatted} dan ${endFormatted}:</p>`;
         outputHTML += '<div class="grid grid-cols-2 md:grid-cols-4 gap-2">';
-        
+
         matchingDates.forEach(date => {
             const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' });
             outputHTML += `<div class="p-2 bg-gray-100 rounded-md text-sm">${formattedDate}</div>`;
         });
-        
+
         outputHTML += '</div>';
     } else {
         outputHTML = `<p class="text-lg font-medium text-red-500">Tidak ditemukan tanggal dengan Weton <b class="text-green-900">${targetDay} ${targetPasaran}</b> dalam rentang waktu yang dipilih.</p>`;
     }
-    
-    hasilDiv.innerHTML = outputHTML;0-0-0
+
+    hasilDiv.innerHTML = outputHTML; 0 - 0 - 0
 }
 function setupDateConfirmation(inputId, displayId) {
     const dateInput = document.getElementById(inputId);
@@ -832,6 +832,10 @@ function initPrimbon() {
             tabContentArea.innerHTML = PRIMBON_CARI_TANGGAL_CONTENT;
             InitCariTanggalContent();
         }
+
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('tab', tabKey);
+        history.pushState(null, '', currentUrl.toString());
         lucide.createIcons();
     }
 }
@@ -978,14 +982,14 @@ function getJavanesePasaran(date) {
 
     const oneDay = 1000 * 60 * 60 * 24;
     const diffTime = dateNormalized.getTime() - epochNormalized.getTime();
-    const diffDays = Math.floor(diffTime / oneDay); 
-    
+    const diffDays = Math.floor(diffTime / oneDay);
+
     // Pasaran index: (days since 1/1/1900) % 5
-    const pasaranIndex = diffDays % 5; 
-    const normalizedIndex = pasaranIndex < 0 ? pasaranIndex + 5 : pasaranIndex; 
-    
+    const pasaranIndex = diffDays % 5;
+    const normalizedIndex = pasaranIndex < 0 ? pasaranIndex + 5 : pasaranIndex;
+
     const pasaranName = JAVANESE_PASARAN[normalizedIndex];
-    
+
     return { name: pasaranName, neptu: NEPTU_PASARAN[pasaranName] };
 }
 
@@ -1004,7 +1008,7 @@ function getWeton(date) {
     const dayName = getIndonesianDayName(date);
     const dayNeptu = NEPTU_HARI[dayName];
     const pasaran = getJavanesePasaran(date);
-    
+
     return {
         day: dayName,
         pasaran: pasaran.name,
@@ -1020,18 +1024,18 @@ function getWeton(date) {
  */
 function findMatchingDates(targetDay, targetPasaran, startDate, endDate) {
     let results = [];
-    let currentDate = new Date(startDate); 
-    
+    let currentDate = new Date(startDate);
+
     while (currentDate <= endDate) {
         const wetonData = getWeton(currentDate);
-        
+
         if (wetonData.day === targetDay && wetonData.pasaran === targetPasaran) {
-            results.push(new Date(currentDate)); 
+            results.push(new Date(currentDate));
         }
-        
-        currentDate.setDate(currentDate.getDate() + 1); 
+
+        currentDate.setDate(currentDate.getDate() + 1);
     }
-    
+
     return results;
 }
 

@@ -316,7 +316,7 @@ function initHIBPCheck() {
         passwordInput.type = type;
         const icon = type === 'password' ? 'eye' : 'eye-off';
         // Asumsi Anda menggunakan library ikon seperti Lucide, ganti ikon di sini
-        toggleBtn.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5"></i>`; 
+        toggleBtn.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5"></i>`;
     });
 
     checkBtn.addEventListener('click', async () => {
@@ -346,11 +346,11 @@ function initHIBPCheck() {
             }
 
             const text = await response.text();
-            
+
             // Mencari suffix (sisa hash) dalam respons
             const lines = text.split('\r\n');
             let foundCount = 0;
-            
+
             for (const line of lines) {
                 const [lineSuffix, count] = line.split(':');
                 if (lineSuffix === suffix) {
@@ -766,6 +766,7 @@ function loadTool(toolKey) {
         default:
             return;
     }
+    history.pushState(null, '', `?tools=${toolKey}`);
 
     contentArea.innerHTML = content;
     lucide.createIcons();

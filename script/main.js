@@ -28,13 +28,33 @@ const pageFiles = {
     tools: 'pages/tools.html',
     settings: 'pages/settings.html'
 };
+
+function loadContentFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const toolKey = params.get('');
+    const tabKey = params.get('tab');
+
+    if (toolKey) {
+        // Gunakan replaceState agar tidak menambahkan history entry saat load awal
+        history.replaceState(null, '', `?tools=${toolKey}${tabKey ? '&tab=' + tabKey : ''}`);
+        loadTool(toolKey);
+    } else {
+        // Jika tidak ada parameter, muat alat default (Ganti 'primbon-tool' jika default Anda berbeda)
+        history.replaceState(null, '', `?tools=default`);
+        loadTool('default');
+    }
+}
+
+// Panggil fungsi ini saat dokumen selesai dimuat (Contoh menggunakan DOMContentLoaded)
+document.addEventListener('DOMContentLoaded', loadContentFromUrl);
 // --- NAVIGATION LOGIC ---
 
-/**
- * Mengambil konten HTML dari file terpisah dan menyuntikkannya ke dalam DOM
- * @param {string} pageKey - Kunci halaman (dashboard, tools, settings)
- */
 async function renderPage(pageKey) {
+    if (pageKey === 'database') {
+        const win = window.open('./login.html', '_blank');
+        if (win) win.opener = null;
+        return;
+    }
     const filePath = pageFiles[pageKey];
     const title = pageTitles[pageKey] || 'Halaman';
 
@@ -42,7 +62,7 @@ async function renderPage(pageKey) {
         contentArea.innerHTML = `<div class="p-10 text-center text-red-500">Halaman tidak ditemukan untuk kunci: ${pageKey}</div>`;
         return;
     }
-
+    history.pushState(null, '', `?${pageKey}`);
     try {
         // 1. Tampilkan loading/placeholder
         contentArea.innerHTML = `<div class="text-center p-10 text-gray-500">Memuat ${title}...</div>`;
