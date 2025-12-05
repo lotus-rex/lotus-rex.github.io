@@ -790,6 +790,7 @@ function loadTool(toolKey) {
     } else if (toolKey === 'password-generator') {
         initPasswordGenerator();
     }
+    trackUmamiEvent('tool_used', { tool: toolKey });
 }
 
 // --- INISIALISASI TOOLS ---

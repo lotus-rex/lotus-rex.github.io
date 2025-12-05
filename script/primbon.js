@@ -450,7 +450,7 @@ function InitCariTanggalContent() {
     const tabContentArea = document.getElementById('primbon-tab-content');
     tabContentArea.innerHTML = PRIMBON_CARI_TANGGAL_CONTENT;
     // Jika Anda menggunakan lucide atau library ikon lain, panggil di sini
-    // lucide.createIcons();
+    lucide.createIcons();
 }
 /**
  * Fungsi untuk mengubah visibilitas input rentang waktu.
@@ -541,6 +541,7 @@ function cariTanggalWeton() {
         outputHTML += '</div>';
     } else {
         outputHTML = `<p class="text-lg font-medium text-red-500">Tidak ditemukan tanggal dengan Weton <b class="text-green-900">${targetDay} ${targetPasaran}</b> dalam rentang waktu yang dipilih.</p>`;
+        trackUmamiEvent('primbon_cari_tanggal_tidak_ditemukan', { hari: targetDay, pasaran: targetPasaran, rentang: rentangPilihan });
     }
 
     hasilDiv.innerHTML = outputHTML; 0 - 0 - 0
@@ -837,6 +838,7 @@ function initPrimbon() {
         currentUrl.searchParams.set('tab', tabKey);
         history.pushState(null, '', currentUrl.toString());
         lucide.createIcons();
+        trackUmamiEvent(`Primbon Tab - ${tabKey}`); // Tracking Umami
     }
 }
 // --- LOGIKA JODOH DARI KODE C# ---

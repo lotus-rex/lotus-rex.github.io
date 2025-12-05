@@ -80,6 +80,7 @@ async function signIn(email, password) {
     } else {
         showMessage('Login selesai, tetapi data pengguna tidak ditemukan. Coba lagi.', 'info');
     }
+    trackUmamiEvent('login_attempt', { success: !error });
 }
 
 /**

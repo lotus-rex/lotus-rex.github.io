@@ -6,6 +6,19 @@ const sidebar = document.getElementById('sidebar');
 const menuToggle = document.getElementById('menu-toggle');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 
+function trackUmamiEvent(eventName, details = {}) {
+  try {
+    if (window.umami && typeof window.umami.track === 'function') {
+      window.umami.track(eventName, details);
+      console.log('[Umami]', eventName, details);
+    } else {
+      console.warn('[Umami] Tracker not loaded yet');
+    }
+  } catch (err) {
+    console.error('[Umami] Tracking failed', err);
+  }
+}
+
 const StatCard = (title, value, iconName, color) => `
     <div class="bg-white p-6 rounded-xl shadow-lg flex items-center justify-between transition duration-300 hover:shadow-xl">
         <div>
@@ -84,6 +97,7 @@ async function renderPage(pageKey) {
             if (itemPage === pageKey) {
                 // Class untuk item yang aktif
                 item.className = item.className.replace('text-indigo-200 hover:bg-indigo-700/50 hover:text-white', 'bg-indigo-700 text-white shadow-md');
+                trackUmamiEvent('navigate', { page: pageKey });
             } else {
                 // Class untuk item yang tidak aktif
                 item.className = item.className.replace('bg-indigo-700 text-white shadow-md', 'text-indigo-200 hover:bg-indigo-700/50 hover:text-white');
