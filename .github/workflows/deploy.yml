@@ -18,8 +18,8 @@ jobs:
 
       - name: Inject Supabase Secrets
         run: |
-          echo "const SUPABASE_URL = \"${{ secrets.SUPABASE_URL }}\";" >> /config.js
-          echo "const SUPABASE_ANON_KEY = \"${{ secrets.SUPABASE_ANON_KEY }}\";" >> /config.js
+          echo "const SUPABASE_URL = \"${{ secrets.SUPABASE_URL }}\";" >> config.js
+          echo "const SUPABASE_ANON_KEY = \"${{ secrets.SUPABASE_ANON_KEY }}\";" >> config.js
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
