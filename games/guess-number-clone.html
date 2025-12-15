@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Guessing Game</title>
+   <link rel="icon" type="image/png" href="/icon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/icon/favicon.svg" />
+    <link rel="shortcut icon" href="/icon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="LotusRex" />
+    <link rel="manifest" href="/icon/site.webmanifest" />
+    <script defer src="https://cloud.umami.is/script.js"
+        data-website-id="f60d79dd-7473-44c3-99dd-c68242dc95ea"></script>
+    <script src="/script/umami-events.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Fokus pada input saat aktif */
+        #guessInput:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5); /* Indigo-500 shadow */
+        }
+
+        /* Gaya khusus untuk papan permainan */
+        .game-board {
+            max-width: 400px;
+            margin: auto;
+        }
+
+        /* Gaya untuk tombol saat game over */
+        .btn-disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-2xl game-board w-full text-center">
+        <h2 class="text-3xl font-extrabold text-indigo-700 mb-2">Tebak Angka!</h2>
+        <p class="text-gray-600 mb-6">Saya memikirkan angka antara 1 dan 100. Berapa tebakan Anda?</p>
+
+        <div id="game-area-guess">
+            <input type="number" id="guessInput" placeholder="Masukkan tebakan (1-100)" min="1" max="100"
+                class="w-full p-4 border-2 border-gray-300 rounded-xl text-center text-xl transition duration-150 focus:border-indigo-500 mb-4">
+
+            <button id="submitGuessBtn"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition duration-150 shadow-md">
+                TEBAK
+            </button>
+
+            <p id="message" class="mt-6 text-xl font-bold text-gray-800"></p>
+            <p id="attempts" class="text-md text-gray-500 mt-2">Percobaan: 0</p>
+        </div>
+
+        <button id="resetBtn"
+            class="hidden w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition duration-150 shadow-md">
+            Mulai Ulang Game
+        </button>
+    </div>
+
+    <script>
+        const guessInput = document.getElementById('guessInput');
+        const submitGuessBtn = document.getElementById('submitGuessBtn');
+        const message = document.getElementById('message');
+        const attemptsDisplay = document.getElementById('attempts');
+        const resetBtn = document.getElementById('resetBtn');
+
+        let secretNumber;
+        let attempts;
+
+        function startGame() {
+            // Menghasilkan angka acak antara 1 dan 100
+            secretNumber = Math.floor(Math.random() * 100) + 1;
+            attempts = 0;
+            
+            message.textContent = 'Game dimulai. Silakan menebak.';
+            message.className = 'mt-6 text-xl font-bold text-gray-800';
+            
+            guessInput.value = '';
+            guessInput.disabled = false;
+            submitGuessBtn.disabled = false;
+            submitGuessBtn.textContent = 'TEBAK';
+            submitGuessBtn.classList.remove('btn-disabled');
+            resetBtn.classList.add('hidden');
+            attemptsDisplay.textContent = 'Percobaan: 0';
+            guessInput.focus(); // Fokus ke input saat game dimulai
+        }
+
+        function checkGuess() {
+            const userGuess = parseInt(guessInput.value);
+
+            if (isNaN(userGuess) || userGuess < 1 || userGuess > 100) {
+                message.textContent = 'Angka tidak valid! Masukkan antara 1 dan 100.';
+                message.className = 'mt-6 text-xl font-bold text-orange-600';
+                guessInput.value = '';
+                return;
+            }
+
+            attempts++;
+            attemptsDisplay.textContent = `Percobaan: ${attempts}`;
+
+            if (userGuess === secretNumber) {
+                message.textContent = `🎉 SELAMAT! Anda benar dalam ${attempts} percobaan!`;
+                message.className = 'mt-6 text-2xl font-extrabold text-green-600';
+                endGame();
+            } else if (userGuess < secretNumber) {
+                message.textContent = 'Terlalu rendah! Coba lagi.';
+                message.className = 'mt-6 text-xl font-bold text-blue-600';
+            } else {
+                message.textContent = 'Terlalu tinggi! Coba lagi.';
+                message.className = 'mt-6 text-xl font-bold text-red-600';
+            }
+            
+            // Bersihkan input setelah setiap tebakan
+            guessInput.value = '';
+            guessInput.focus();
+        }
+
+        function endGame() {
+            guessInput.disabled = true;
+            submitGuessBtn.disabled = true;
+            submitGuessBtn.textContent = 'GAME SELESAI';
+            submitGuessBtn.classList.add('btn-disabled');
+            resetBtn.classList.remove('hidden');
+        }
+
+        // --- Event Listeners ---
+        submitGuessBtn.addEventListener('click', checkGuess);
+        guessInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                checkGuess();
+            }
+        });
+        resetBtn.addEventListener('click', startGame);
+
+        // Inisialisasi Game saat halaman dimuat
+        startGame();
+    </script>
+</body>
+
+</html>

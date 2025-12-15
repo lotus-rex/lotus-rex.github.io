@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whack-a-Mole Game</title>
+    <link rel="icon" type="image/png" href="/icon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/icon/favicon.svg" />
+    <link rel="shortcut icon" href="/icon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="LotusRex" />
+    <link rel="manifest" href="/icon/site.webmanifest" />
+    <script defer src="https://cloud.umami.is/script.js"
+        data-website-id="f60d79dd-7473-44c3-99dd-c68242dc95ea"></script>
+    <script src="/script/umami-events.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/script/config.js"></script>
+    <style>
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Gaya Papan Game (3x3 Grid) */
+        .mole-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 15px;
+            width: 330px;
+            height: 330px;
+            padding: 15px;
+            background-color: #588157;
+            /* Hijau Tanah */
+            border-radius: 15px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Gaya Lubang/Hole */
+        .hole {
+            background-color: #889f88;
+            /* Tanah yang lebih terang */
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            border: 5px solid #236e23;
+            transition: background-color 0.1s;
+        }
+
+        /* Gaya Mole (Tikus Tanah) */
+        .mole {
+            position: absolute;
+            bottom: -5px;
+            /* Mulai sedikit tersembunyi */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            height: 90%;
+            background-color: #3b3b3b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            transition: bottom 0.2s ease-out;
+            pointer-events: none;
+            /* Mole tidak bisa diklik jika sedang disembunyikan */
+        }
+
+        /* Gaya Mole saat Muncul */
+        .mole.visible {
+            bottom: 50%;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        /* Overlay Styling */
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .customization-box {
+            max-width: 350px;
+            width: 80%;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen game-container p-4">
+
+    <h2 class="text-3xl font-extrabold text-gray-800 mb-4">Whack-a-Mole</h2>
+
+    <div class="relative game-container w-full max-w-lg">
+        <div class="flex justify-between w-full mb-4 px-4 max-w-[360px]">
+            <div class="text-center">
+                <p class="text-sm font-medium text-gray-500">Skor</p>
+                <p id="scoreDisplay" class="text-3xl font-extrabold text-indigo-600">0</p>
+            </div>
+            <div class="text-center">
+                <p class="text-sm font-medium text-gray-500">Waktu</p>
+                <p id="timerDisplay" class="text-3xl font-extrabold text-red-600">30</p>
+            </div>
+        </div>
+
+        <div id="gameBoard" class="mole-grid relative">
+        </div>
+
+        <div id="startScreen" class="game-overlay absolute">
+            <div class="customization-box text-center">
+                <h3 class="text-3xl font-extrabold mb-4 text-indigo-700">SIAP MEMUKUL?</h3>
+
+                <div class="text-left mb-4">
+                    <label for="usernameInput" class="block text-sm font-medium text-gray-700">Username Anda</label>
+                    <input type="text" id="usernameInput" value="Pemain" placeholder="Masukkan Nama"
+                        class="mt-1 block w-full p-2 border border-gray-300 rounded-md text-gray-800">
+                </div>
+
+                <button id="startGameBtn"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition duration-150">
+                    Mulai Game
+                </button>
+            </div>
+        </div>
+
+        <div id="gameOverScreen" class="game-overlay absolute" style="display: none;">
+            <div class="customization-box text-center">
+                <h3 class="text-4xl font-extrabold mb-4 text-red-600">WAKTU HABIS!</h3>
+                <p class="text-xl mb-6 text-gray-700">Skor Akhir: <span id="finalScore"
+                        class="font-extrabold text-red-600">0</span></p>
+                <button id="restartBtn"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150">
+                    Main Lagi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-10 p-6 bg-white rounded-xl shadow-lg w-full max-w-lg">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Top 5 Skor "Whack-a-Mole"</h3>
+        <div id="lastScoresList">
+        </div>
+    </div>
+
+    <script>
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- DOM Elements ---
+        const gameBoard = document.getElementById('gameBoard');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const restartBtn = document.getElementById('restartBtn');
+        const startGameBtn = document.getElementById('startGameBtn');
+        const usernameInput = document.getElementById('usernameInput');
+        const lastScoresList = document.getElementById('lastScoresList');
+
+        // --- Konstanta Game ---
+        const GAME_DURATION = 30; // Detik
+        const HOLE_COUNT = 9;
+
+        let score = 0;
+        let timeLeft = GAME_DURATION;
+        let timerInterval;
+        let moleInterval;
+        let isGameActive = false;
+        let gameUsername = 'Pemain';
+
+        // Array untuk menyimpan elemen Mole
+        const moles = [];
+
+        // --- Supabase Functions ---
+
+        async function saveScore(username, finalScore) {
+            if (!username || finalScore === 0) return;
+
+            if (finalScore > 0) {
+                const { error } = await supabase
+                    .from('PublicData')
+                    .insert([
+                        {
+                            type: 'Whack-a-Mole',
+                            username: username,
+                            data: null, // Tidak ada data kustomisasi warna
+                            score: finalScore
+                        },
+                    ]);
+
+                if (error) {
+                    console.error('Error saving score:', error);
+                }
+            }
+        }
+
+        async function fetchLastScores() {
+            lastScoresList.innerHTML = '<p class="text-gray-500 text-center">Memuat skor...</p>';
+
+            const { data, error } = await supabase
+                .from('PublicData')
+                .select('username, score')
+                .eq('type', 'Whack-a-Mole')
+                .order('score', { ascending: false })
+                .limit(5);
+
+            if (error) {
+                lastScoresList.innerHTML = `<p class="text-red-500 text-center">Gagal memuat skor: ${error.message.substring(0, 50)}...</p>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                lastScoresList.innerHTML = '<p class="text-gray-500 text-center">Belum ada skor yang tersimpan. Ayo mulai!</p>';
+                return;
+            }
+
+            lastScoresList.innerHTML = '';
+            const ul = document.createElement('ul');
+            ul.className = 'space-y-2 text-left';
+
+            data.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center text-sm font-medium border-b pb-1 last:border-b-0';
+                const rank = index + 1;
+
+                li.innerHTML = `
+                    <span class="font-bold text-lg text-gray-700 w-6">${rank}.</span>
+                    <span class="flex-1">${item.username}</span>
+                    <span class="text-indigo-600 font-extrabold">${item.score}</span>
+                `;
+                ul.appendChild(li);
+            });
+            lastScoresList.appendChild(ul);
+        }
+
+        // --- Logika Game ---
+
+        function createGameBoard() {
+            gameBoard.innerHTML = '';
+            moles.length = 0;
+            for (let i = 0; i < HOLE_COUNT; i++) {
+                const hole = document.createElement('div');
+                hole.classList.add('hole');
+                hole.id = `hole-${i}`;
+
+                const mole = document.createElement('div');
+                mole.classList.add('mole');
+                mole.innerHTML = '🐭'; // Simbol Mole
+                mole.addEventListener('click', handleWhack);
+                moles.push(mole);
+
+                hole.appendChild(mole);
+                gameBoard.appendChild(hole);
+            }
+        }
+
+        function randomMole() {
+            // Sembunyikan semua mole
+            moles.forEach(mole => mole.classList.remove('visible'));
+
+            // Pilih satu mole acak
+            const randomIndex = Math.floor(Math.random() * HOLE_COUNT);
+            const selectedMole = moles[randomIndex];
+
+            // Tampilkan mole
+            selectedMole.classList.add('visible');
+
+            // Atur waktu sembunyi (antara 700ms dan 1500ms)
+            const hideTime = Math.random() * 800 + 700;
+            setTimeout(() => {
+                selectedMole.classList.remove('visible');
+            }, hideTime);
+        }
+
+        function handleWhack(e) {
+            if (!isGameActive) return;
+
+            const mole = e.currentTarget;
+            if (mole.classList.contains('visible')) {
+                score++;
+                scoreDisplay.textContent = score;
+                mole.classList.remove('visible'); // Sembunyikan segera setelah dipukul
+                // Tambahkan efek visual singkat jika perlu
+            }
+        }
+
+        function startTimer() {
+            timeLeft = GAME_DURATION;
+            timerDisplay.textContent = timeLeft;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function startMoleInterval() {
+            // Mole muncul secara acak setiap 700ms
+            moleInterval = setInterval(randomMole, 700);
+        }
+
+        function startGame() {
+            gameUsername = usernameInput.value.trim() || 'Pemain';
+            if (gameUsername.length > 20) gameUsername = gameUsername.substring(0, 20);
+
+            // Reset
+            score = 0;
+            scoreDisplay.textContent = 0;
+            isGameActive = true;
+
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+
+            // Bersihkan interval yang mungkin berjalan
+            clearInterval(timerInterval);
+            clearInterval(moleInterval);
+
+            // Mulai
+            startTimer();
+            startMoleInterval();
+        }
+
+        function endGame() {
+            isGameActive = false;
+            clearInterval(timerInterval);
+            clearInterval(moleInterval);
+
+            // Pastikan semua mole tersembunyi
+            moles.forEach(mole => mole.classList.remove('visible'));
+
+            finalScoreDisplay.textContent = score;
+            gameOverScreen.style.display = 'flex';
+
+            // Simpan dan Muat Ulang Skor
+            saveScore(gameUsername, score);
+            setTimeout(fetchLastScores, 500);
+        }
+
+        // --- Event Listeners & Inisialisasi ---
+        startGameBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            createGameBoard();
+            fetchLastScores();
+        });
+    </script>
+</body>
+
+</html>

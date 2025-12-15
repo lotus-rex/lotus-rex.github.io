@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Speed Test</title>
+    <link rel="icon" type="image/png" href="/icon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/icon/favicon.svg" />
+    <link rel="shortcut icon" href="/icon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="LotusRex" />
+    <link rel="manifest" href="/icon/site.webmanifest" />
+    <script defer src="https://cloud.umami.is/script.js"
+        data-website-id="f60d79dd-7473-44c3-99dd-c68242dc95ea"></script>
+    <script src="/script/umami-events.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/script/config.js"></script>
+    <style>
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #textDisplay {
+            min-height: 150px;
+            max-height: 200px;
+            /* Batasi tinggi untuk tampilan */
+            overflow-y: auto;
+            /* Memungkinkan scroll vertikal */
+            padding: 20px;
+            border-radius: 10px;
+            line-height: 1.8;
+            font-size: 1.25rem;
+            text-align: justify;
+            background-color: #f0f9ff;
+            font-family: monospace;
+
+            /* --- Perubahan Utama untuk Wrapping --- */
+            white-space: normal;
+            /* Pastikan tidak ada nowrap */
+            word-wrap: break-word;
+            /* Memastikan kata panjang bisa terpotong jika perlu */
+        }
+
+        .correct {
+            color: #16a34a;
+        }
+
+        .incorrect {
+            background-color: #fca5a5;
+            color: black;
+            border-bottom: 2px solid #dc2626;
+        }
+
+        .current {
+            background-color: #bae6fd;
+            border-left: 2px solid #0369a1;
+        }
+
+        #typingInput {
+            font-size: 1.25rem;
+            border: 3px solid #3b82f6;
+            transition: border-color 0.3s;
+        }
+
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        #startScreen,
+        #resultScreen {
+            display: none;
+        }
+
+        .customization-box {
+            max-width: 400px;
+            width: 90%;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Mobile adjustment */
+        @media (max-width: 640px) {
+            #textDisplay {
+                font-size: 1rem;
+            }
+
+            .status-display {
+                font-size: 0.9rem !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen game-container p-4">
+
+    <h2 class="text-3xl font-extrabold text-gray-800 mb-6">Typing Speed Test</h2>
+
+    <div class="w-full max-w-2xl relative game-container">
+
+        <div class="flex justify-between w-full mb-4 p-2 font-mono status-display">
+            <div class="text-xl font-bold text-gray-700">
+                Waktu: <span id="timeDisplay" class="text-indigo-600">60</span>s
+            </div>
+            <div class="text-xl font-bold text-gray-700">
+                WPM: <span id="wpmDisplay" class="text-green-600">0</span>
+            </div>
+            <div class="text-xl font-bold text-gray-700">
+                Akurasi: <span id="accuracyDisplay" class="text-red-600">0</span>%
+            </div>
+        </div>
+
+        <div id="textDisplay" class="w-full shadow-lg border border-gray-200">
+            Memuat teks...
+        </div>
+
+        <textarea id="typingInput" class="w-full mt-4 p-4 rounded-lg resize-none disabled:bg-gray-200" rows="3"
+            placeholder="Ketik teks di sini untuk memulai!" disabled></textarea>
+
+        <div id="startScreen" class="game-overlay">
+            <div class="customization-box text-center">
+                <h3 class="text-3xl font-extrabold mb-4 text-blue-600">MULAI TES KETIK</h3>
+
+                <div class="text-left mb-4">
+                    <label for="usernameInput" class="block text-sm font-medium text-gray-700">Username Anda</label>
+                    <input type="text" id="usernameInput" value="PemainCepat" placeholder="Masukkan Nama"
+                        class="mt-1 block w-full p-2 border border-gray-300 rounded-md text-gray-800">
+                </div>
+
+                <div class="text-left mb-6">
+                    <label for="timeLimitSelect" class="block text-sm font-medium text-gray-700">Durasi Tes</label>
+                    <select id="timeLimitSelect"
+                        class="mt-1 block w-full p-2 border border-gray-300 rounded-md text-gray-800 bg-white">
+                        <option value="60">1 Menit</option>
+                        <option value="30">30 Detik</option>
+                        <option value="120">2 Menit</option>
+                    </select>
+                </div>
+
+                <button id="startGameBtn"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-150">
+                    Mulai Tes
+                </button>
+            </div>
+        </div>
+
+        <div id="resultScreen" class="game-overlay">
+            <div class="customization-box text-center">
+                <h3 class="text-4xl font-extrabold mb-4 text-green-600">HASIL ANDA</h3>
+                <p class="text-xl mb-3 text-gray-700">WPM: <span id="finalWPM"
+                        class="font-extrabold text-green-600 text-3xl">0</span></p>
+                <p class="text-lg mb-6 text-gray-700">Akurasi: <span id="finalAccuracy"
+                        class="font-bold text-red-500">0</span>%</p>
+
+                <button id="restartBtn"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150">
+                    Coba Lagi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-10 p-6 bg-white rounded-xl shadow-lg w-full max-w-2xl">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Top WPM (1 Menit)</h3>
+        <div id="leaderboardList">
+            <p class="text-gray-500">Memuat Leaderboard...</p>
+        </div>
+    </div>
+
+    <script>
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- DOM Elements ---
+        const textDisplay = document.getElementById('textDisplay');
+        const typingInput = document.getElementById('typingInput');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const wpmDisplay = document.getElementById('wpmDisplay');
+        const accuracyDisplay = document.getElementById('accuracyDisplay');
+        const startScreen = document.getElementById('startScreen');
+        const resultScreen = document.getElementById('resultScreen');
+        const finalWPMDisplay = document.getElementById('finalWPM');
+        const finalAccuracyDisplay = document.getElementById('finalAccuracy');
+        const usernameInput = document.getElementById('usernameInput');
+        const timeLimitSelect = document.getElementById('timeLimitSelect');
+        const startGameBtn = document.getElementById('startGameBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const leaderboardList = document.getElementById('leaderboardList');
+
+        // --- Status Game ---
+        let sourceText = '';
+        let sourceWords = [];
+        let currentWordIndex = 0;
+        let charCount = 0; // Karakter benar (termasuk spasi)
+        let errorCount = 0; // Total kesalahan karakter yang tercatat
+        let totalTypedChars = 0; // Total karakter yang pernah diketik (untuk akurasi)
+
+        let timeLimit = 60;
+        let timeLeft = 60;
+        let timerInterval;
+        let isRunning = false;
+        let gameUsername = 'PemainCepat';
+
+        // --- Supabase Functions ---
+
+        async function saveScore(username, wpm, accuracy, duration) {
+            if (!username || wpm === 0 || duration !== 60) return;
+
+            const { error } = await supabase
+                .from('PublicData')
+                .insert([
+                    {
+                        type: `Typing Test - 60s`,
+                        username: username,
+                        data: `duration ${duration} accuracy ${accuracy / 100}`,
+                        score: wpm
+                    },
+                ]);
+
+            if (error) {
+                console.error('Error saving score:', error);
+            }
+        }
+
+        async function fetchLeaderboard() {
+            leaderboardList.innerHTML = `<p class="text-gray-500 text-center">Memuat skor (1 Menit)...</p>`;
+
+            const { data, error } = await supabase
+                .from('PublicData')
+                .select('username, score, data')
+                .eq('type', `Typing Test - 60s`)
+                .order('score', { ascending: false })
+                .limit(5);
+
+            if (error) {
+                leaderboardList.innerHTML = `<p class="text-red-500 text-center">Gagal memuat skor: ${error.message.substring(0, 50)}...</p>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                leaderboardList.innerHTML = '<p class="text-gray-500 text-center">Belum ada skor 1 menit yang tersimpan. Ayo buat rekor!</p>';
+                return;
+            }
+
+            leaderboardList.innerHTML = '';
+            const ul = document.createElement('ul');
+            ul.className = 'space-y-2 text-left';
+
+            data.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center text-sm font-medium border-b pb-1 last:border-b-0';
+
+                const rank = index + 1;
+
+                li.innerHTML = `
+                    <span class="font-bold text-lg text-gray-700 w-6">${rank}.</span>
+                    <span class="flex-1">${item.username}</span>
+                    <span class="text-green-600 font-extrabold">${item.data} and ${item.score} WPM</span>
+                `;
+                ul.appendChild(li);
+            });
+            leaderboardList.appendChild(ul);
+        }
+
+        // --- Game Logic Functions ---
+
+        async function loadSourceText() {
+            try {
+                const response = await fetch('/db/typing_text.txt');
+                if (!response.ok) {
+                    throw new Error('Gagal memuat teks sumber');
+                }
+                sourceText = (await response.text()).trim();
+                sourceWords = sourceText.split(/\s+/);
+                renderText();
+                typingInput.disabled = false;
+                typingInput.placeholder = "Ketik di sini untuk memulai!";
+            } catch (error) {
+                console.error(error);
+                textDisplay.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+            }
+        }
+
+        function renderText() {
+            textDisplay.innerHTML = '';
+            sourceWords.forEach((word, index) => {
+                const span = document.createElement('span');
+                // Tambahkan spasi di akhir kata dalam tampilan
+                span.innerHTML = word + '&nbsp;';
+                if (index === currentWordIndex) {
+                    span.classList.add('current');
+                }
+                textDisplay.appendChild(span);
+            });
+
+            // Gulirkan tampilan teks agar kata yang sedang diketik terlihat jelas
+            const currentSpan = textDisplay.querySelector('.current');
+            if (currentSpan) {
+                currentSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function updateStatusDisplay() {
+            const elapsedTime = timeLimit - timeLeft;
+            const wpm = calculateWPM(charCount, elapsedTime);
+
+            // Akurasi dihitung dari total karakter yang benar dibandingkan total karakter yang telah diketik
+            const accuracy = calculateAccuracy(totalTypedChars - errorCount, totalTypedChars);
+
+            wpmDisplay.textContent = wpm;
+            accuracyDisplay.textContent = accuracy;
+        }
+
+        function calculateWPM(totalCharsCorrect, seconds) {
+            if (seconds === 0) return 0;
+            const minutes = seconds / 60;
+            // Kita menggunakan karakter yang benar (charCount) sebagai basis WPM, karena ini adalah Net WPM
+            const netWPM = (totalCharsCorrect / 5) / minutes;
+            return Math.max(0, Math.round(netWPM));
+        }
+
+        function calculateAccuracy(correctInputChars, totalInputChars) {
+            if (totalInputChars === 0) return 0;
+            return Math.round((correctInputChars / totalInputChars) * 100);
+        }
+
+        function handleInputHighlight() {
+            if (!isRunning) return;
+
+            const typedText = typingInput.value;
+            const currentWord = sourceWords[currentWordIndex];
+
+            // Update Total Typed Chars (hanya karakter yang baru)
+            totalTypedChars = typedText.length + charCount;
+
+            // 1. Cek Kesalahan dan Highlight
+            const wordSpans = textDisplay.querySelectorAll('span');
+            if (currentWordIndex < wordSpans.length) {
+                const currentSpan = wordSpans[currentWordIndex];
+                currentSpan.innerHTML = '';
+
+                let currentWordError = 0;
+                for (let i = 0; i < currentWord.length; i++) {
+                    const charSpan = document.createElement('span');
+                    charSpan.textContent = currentWord[i];
+
+                    if (i < typedText.length) {
+                        if (typedText[i] === currentWord[i]) {
+                            charSpan.classList.add('correct');
+                        } else {
+                            charSpan.classList.add('incorrect');
+                            currentWordError++;
+                        }
+                    }
+                    currentSpan.appendChild(charSpan);
+                }
+
+                // Highlight kelebihan karakter (error)
+                if (typedText.length > currentWord.length) {
+                    currentWordError += typedText.length - currentWord.length;
+                    for (let i = currentWord.length; i < typedText.length; i++) {
+                        const extraCharSpan = document.createElement('span');
+                        // Tampilkan karakter yang diketik
+                        extraCharSpan.textContent = typedText[i];
+                        extraCharSpan.classList.add('incorrect');
+                        currentSpan.appendChild(extraCharSpan);
+                    }
+                }
+
+                // Update tampilan akurasi secara real-time
+                const totalErrorsCurrent = errorCount + currentWordError;
+                const totalCharsCurrent = charCount + typedText.length;
+
+                const accuracy = calculateAccuracy(totalCharsCurrent - totalErrorsCurrent, totalCharsCurrent);
+                accuracyDisplay.textContent = accuracy;
+
+                currentSpan.classList.add('current');
+            }
+        }
+
+        function handleSpacePress(e) {
+            if (e.key === ' ' || e.keyCode === 32) {
+                e.preventDefault(); // Mencegah spasi dimasukkan ke textarea
+
+                if (!isRunning) {
+                    startTimer();
+                    isRunning = true;
+                }
+
+                const typedWord = typingInput.value.trim();
+                const currentWord = sourceWords[currentWordIndex];
+
+                if (typedWord === '') return; // Abaikan jika input kosong
+
+                // 1. Hitung Kesalahan dan Pindahkan ke Kata Berikutnya
+                let wordErrors = 0;
+                const minLength = Math.min(currentWord.length, typedWord.length);
+
+                for (let i = 0; i < minLength; i++) {
+                    if (currentWord[i] !== typedWord[i]) {
+                        wordErrors++;
+                    }
+                }
+                // Tambahkan kesalahan untuk perbedaan panjang
+                wordErrors += Math.abs(currentWord.length - typedWord.length);
+
+                // Update status global
+                errorCount += wordErrors;
+                charCount += currentWord.length; // Hitung panjang kata sumber yang "dicoba"
+
+                // 2. Transisi
+                const wordSpans = textDisplay.querySelectorAll('span');
+                if (currentWordIndex < wordSpans.length) {
+                    const finishedSpan = wordSpans[currentWordIndex];
+                    finishedSpan.classList.remove('current');
+                    // Tentukan apakah kata tersebut benar-benar salah atau benar
+                    const isFullyCorrect = (wordErrors === 0 && currentWord.length === typedWord.length);
+                    finishedSpan.classList.add(isFullyCorrect ? 'correct' : 'incorrect');
+
+                    // Selesaikan highlight final kata
+                    finishedSpan.innerHTML = currentWord + '&nbsp;';
+                }
+
+                currentWordIndex++;
+                typingInput.value = ''; // Reset input field
+
+                if (currentWordIndex < sourceWords.length) {
+                    renderText();
+                } else {
+                    // Selesai mengetik semua teks
+                    endGame();
+                }
+
+                updateStatusDisplay();
+            }
+        }
+
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeDisplay.textContent = timeLeft;
+
+                // Update WPM & Akurasi (refresh)
+                updateStatusDisplay();
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            typingInput.disabled = true;
+
+            const finalTime = timeLimit - timeLeft;
+
+            // WPM Final dihitung berdasarkan total karakter yang benar dibagi total waktu
+            const finalWPM = calculateWPM(charCount, finalTime);
+
+            // Akurasi Final (hitung kesalahan yang masih ada di kata terakhir)
+            const typedCurrentWord = typingInput.value.trim();
+            const targetCurrentWord = sourceWords[currentWordIndex] || ''; // Ambil kata terakhir
+
+            let currentWordErrors = 0;
+            const minLength = Math.min(targetCurrentWord.length, typedCurrentWord.length);
+            for (let i = 0; i < minLength; i++) {
+                if (targetCurrentWord[i] !== typedCurrentWord[i]) {
+                    currentWordErrors++;
+                }
+            }
+            currentWordErrors += Math.abs(targetCurrentWord.length - typedCurrentWord.length);
+
+            const totalFinalErrors = errorCount + currentWordErrors;
+            const totalFinalCharsTyped = charCount + typedCurrentWord.length; // CharCount sudah termasuk kata yang benar
+
+            const finalAccuracy = calculateAccuracy(totalFinalCharsTyped - totalFinalErrors, totalFinalCharsTyped);
+
+            finalWPMDisplay.textContent = finalWPM;
+            finalAccuracyDisplay.textContent = finalAccuracy;
+            resultScreen.style.display = 'flex';
+
+            saveScore(gameUsername, finalWPM, finalAccuracy, timeLimit);
+            setTimeout(fetchLeaderboard, 500);
+        }
+
+        // --- Flow Game ---
+
+        function startGame() {
+            gameUsername = usernameInput.value.trim() || 'PemainCepat';
+            if (gameUsername.length > 20) gameUsername = gameUsername.substring(0, 20);
+
+            timeLimit = parseInt(timeLimitSelect.value);
+            timeLeft = timeLimit;
+
+            currentWordIndex = 0;
+            charCount = 0;
+            errorCount = 0;
+            totalTypedChars = 0; // Reset total karakter yang pernah diketik
+            isRunning = false;
+
+            timeDisplay.textContent = timeLimit;
+            wpmDisplay.textContent = 0;
+            accuracyDisplay.textContent = 0;
+            typingInput.value = '';
+            typingInput.disabled = false;
+            typingInput.focus();
+
+            startScreen.style.display = 'none';
+            resultScreen.style.display = 'none';
+
+            renderText();
+        }
+
+        // --- Event Listeners & Inisialisasi ---
+
+        // Perbaikan: Gunakan 'input' hanya untuk highlight real-time
+        typingInput.addEventListener('input', handleInputHighlight);
+
+        // Perbaikan: Gunakan 'keydown'/'keypress' untuk menangani lompatan kata yang dipicu oleh Spasi
+        typingInput.addEventListener('keydown', handleSpacePress);
+
+        startGameBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSourceText();
+            startScreen.style.display = 'flex';
+            fetchLeaderboard();
+        });
+    </script>
+</body>
+
+</html>

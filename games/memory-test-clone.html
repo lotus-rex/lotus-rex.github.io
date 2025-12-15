@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Memory Test</title>
+    <link rel="icon" type="image/png" href="/icon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/icon/favicon.svg" />
+    <link rel="shortcut icon" href="/icon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="LotusRex" />
+    <link rel="manifest" href="/icon/site.webmanifest" />
+    <script defer src="https://cloud.umami.is/script.js"
+        data-website-id="f60d79dd-7473-44c3-99dd-c68242dc95ea"></script>
+    <script src="/script/umami-events.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .color-tile {
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.1s, transform 0.1s, box-shadow 0.1s;
+        }
+
+        .color-tile:hover:not(.disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .highlight {
+            opacity: 1 !important;
+            transform: scale(0.95);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .disabled {
+            pointer-events: none;
+            cursor: default;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-lg w-full text-center">
+        <h2 class="text-3xl font-extrabold text-red-700 mb-2">Color Memory Test</h2>
+        <p class="text-gray-600 mb-6">Ulangi urutan warna yang akan menyala. Ingat baik-baik!</p>
+
+        <div class="flex justify-between items-center mb-6 px-4">
+            <div class="text-center">
+                <p class="text-sm font-medium text-gray-500">Level</p>
+                <p id="levelDisplay" class="text-4xl font-extrabold text-red-600 mt-1">1</p>
+            </div>
+            <div class="text-center">
+                <p class="text-sm font-medium text-gray-500">Skor Tertinggi</p>
+                <p id="highScoreDisplay" class="text-4xl font-extrabold text-indigo-600 mt-1">0</p>
+            </div>
+        </div>
+
+        <div id="gameBoard" class="grid grid-cols-3 gap-4 justify-center disabled">
+            <div data-color="red" class="color-tile bg-red-500 opacity-50"></div>
+            <div data-color="blue" class="color-tile bg-blue-500 opacity-50"></div>
+            <div data-color="green" class="color-tile bg-green-500 opacity-50"></div>
+            <div data-color="yellow" class="color-tile bg-yellow-500 opacity-50"></div>
+            <div data-color="purple" class="color-tile bg-purple-500 opacity-50"></div>
+            <div data-color="pink" class="color-tile bg-pink-500 opacity-50"></div>
+            <div data-color="cyan" class="color-tile bg-cyan-500 opacity-50"></div>
+            <div data-color="orange" class="color-tile bg-orange-500 opacity-50"></div>
+            <div data-color="teal" class="color-tile bg-teal-500 opacity-50"></div>
+        </div>
+
+        <p id="message" class="mt-6 text-xl font-bold text-gray-800">Tekan Mulai untuk bermain</p>
+
+        <button id="startGameBtn"
+            class="mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition duration-150 shadow-md">
+            Mulai Game
+        </button>
+
+    </div>
+
+    <script>
+        const gameBoard = document.getElementById('gameBoard');
+        const tiles = document.querySelectorAll('.color-tile');
+        const messageDisplay = document.getElementById('message');
+        const startGameBtn = document.getElementById('startGameBtn');
+        const levelDisplay = document.getElementById('levelDisplay');
+        const highScoreDisplay = document.getElementById('highScoreDisplay');
+
+        const COLORS = ['red', 'blue', 'green', 'yellow', 'purple', 'pink', 'cyan', 'orange', 'teal'];
+
+        let sequence = [];
+        let playerSequence = [];
+        let level = 1;
+        let isPlaying = false;
+        let waitingForInput = false;
+
+        // Ambil High Score dari Local Storage
+        let highScore = parseInt(localStorage.getItem('memoryHighScore')) || 0;
+        highScoreDisplay.textContent = highScore;
+
+        // --- Logika Utama Game ---
+
+        function addColorToSequence() {
+            // Tambahkan warna acak ke urutan
+            const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+            sequence.push(randomColor);
+        }
+
+        function flashTile(color) {
+            return new Promise(resolve => {
+                const tile = document.querySelector(`.color-tile[data-color="${color}"]`);
+                if (!tile) {
+                    // Handle jika warna tidak ditemukan (seharusnya tidak terjadi)
+                    resolve();
+                    return;
+                }
+
+                // Nyalakan
+                tile.classList.add('highlight', `bg-${color}-300`);
+                setTimeout(() => {
+                    // Matikan
+                    tile.classList.remove('highlight', `bg-${color}-300`);
+                    setTimeout(resolve, 150); // Jeda antar flash
+                }, 400); // Durasi flash
+            });
+        }
+
+        async function playSequence() {
+            isPlaying = true;
+            waitingForInput = false;
+            gameBoard.classList.add('disabled');
+            messageDisplay.textContent = 'Lihat urutannya...';
+
+            // Flash seluruh urutan
+            for (const color of sequence) {
+                await flashTile(color);
+            }
+
+            // Setelah selesai, tunggu input pemain
+            waitingForInput = true;
+            isPlaying = false;
+            gameBoard.classList.remove('disabled');
+            messageDisplay.textContent = 'Giliran Anda! Ulangi urutan tersebut.';
+            playerSequence = [];
+        }
+
+        function checkPlayerInput(color) {
+            if (!waitingForInput || isPlaying) return;
+
+            // 1. Flash pilihan pemain secara instan
+            const tile = document.querySelector(`.color-tile[data-color="${color}"]`);
+            if (tile) {
+                tile.classList.add('highlight', 'bg-gray-300');
+                setTimeout(() => tile.classList.remove('highlight', 'bg-gray-300'), 150);
+            }
+
+            playerSequence.push(color);
+            const index = playerSequence.length - 1;
+
+            if (playerSequence[index] === sequence[index]) {
+                // Benar sejauh ini
+                if (playerSequence.length === sequence.length) {
+                    // Berhasil menyelesaikan level
+                    level++;
+                    levelDisplay.textContent = level;
+
+                    // Update High Score jika skor saat ini lebih tinggi
+                    if (level - 1 > highScore) {
+                        highScore = level - 1;
+                        localStorage.setItem('memoryHighScore', highScore);
+                        highScoreDisplay.textContent = highScore;
+                    }
+
+                    messageDisplay.textContent = 'BENAR! Lanjut ke Level ' + level;
+                    setTimeout(nextLevel, 1500);
+                }
+            } else {
+                // Salah! Game Over
+                gameOver();
+            }
+        }
+
+        function gameOver() {
+            waitingForInput = false;
+            gameBoard.classList.add('disabled');
+            messageDisplay.textContent = `❌ GAME OVER! Anda mencapai Level ${level - 1}.`;
+            messageDisplay.className = 'mt-6 text-2xl font-extrabold text-red-800';
+            startGameBtn.textContent = 'Mulai Ulang';
+            startGameBtn.classList.remove('hidden');
+        }
+
+        // --- Flow Game ---
+
+        function startNewGame() {
+            sequence = [];
+            playerSequence = [];
+            level = 1;
+            levelDisplay.textContent = level;
+            startGameBtn.classList.add('hidden');
+            nextLevel();
+        }
+
+        function nextLevel() {
+            playerSequence = [];
+            addColorToSequence(); // Tambah satu warna baru
+            setTimeout(playSequence, 1000);
+        }
+
+        // --- Event Listeners ---
+        startGameBtn.addEventListener('click', startNewGame);
+
+        tiles.forEach(tile => {
+            tile.addEventListener('click', (e) => {
+                const color = e.currentTarget.dataset.color;
+                checkPlayerInput(color);
+            });
+        });
+
+    </script>
+</body>
+
+</html>

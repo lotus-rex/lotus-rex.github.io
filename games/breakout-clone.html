@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breakout/Arkanoid Clone</title>
+    <link rel="icon" type="image/png" href="/icon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/icon/favicon.svg" />
+    <link rel="shortcut icon" href="/icon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="LotusRex" />
+    <link rel="manifest" href="/icon/site.webmanifest" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cloud.umami.is/script.js"
+        data-website-id="f60d79dd-7473-44c3-99dd-c68242dc95ea"></script>
+    <script src="/script/umami-events.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/script/config.js"></script>
+    <style>
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #gameCanvas {
+            /* Ukuran default untuk Desktop */
+            border: 5px solid #333;
+            background-color: #f7f7f7;
+        }
+
+        /* --- Mobile View Adjustments --- */
+        @media (max-width: 550px) {
+            .game-container {
+                width: 100%;
+                max-width: 100%;
+                padding: 0 10px;
+                /* Tambahkan sedikit padding samping */
+            }
+
+            #gameCanvas {
+                width: 95vw;
+                /* Ambil 95% lebar viewport */
+                /* Hitung tinggi agar rasio 4:5 (600/480 = 1.25) tetap terjaga */
+                height: calc(95vw * 1.25);
+                border-width: 3px;
+            }
+
+            /* Sesuaikan ukuran font pada status display */
+            .status-display {
+                font-size: 1.25rem !important;
+                /* Contoh: 20px */
+            }
+
+            .hint-text {
+                font-size: 0.75rem;
+                /* Teks petunjuk lebih kecil */
+            }
+        }
+
+        /* ---------------------------------- */
+
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        #gameOverScreen {
+            display: none;
+        }
+
+        .customization-box {
+            max-width: 350px;
+            width: 80%;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen game-container p-4">
+
+    <h2 class="text-3xl font-extrabold text-gray-800 mb-4">Breakout Clone</h2>
+
+    <div class="relative game-container">
+        <canvas id="gameCanvas" width="480" height="600"></canvas>
+
+        <div id="startScreen" class="game-overlay">
+            <div class="customization-box text-center">
+                <h3 class="text-3xl font-extrabold mb-4 text-orange-600">BREAKOUT KLASIK</h3>
+
+                <div class="text-left mb-4">
+                    <label for="usernameInput" class="block text-sm font-medium text-gray-700">Username Anda</label>
+                    <input type="text" id="usernameInput" value="PemainBreakout" placeholder="Masukkan Nama"
+                        class="mt-1 block w-full p-2 border border-gray-300 rounded-md text-gray-800">
+                </div>
+
+                <div class="text-left mb-6">
+                    <label for="colorInput" class="block text-sm font-medium text-gray-700">Warna Paddle</label>
+                    <input type="color" id="colorInput" value="#FF8C00"
+                        class="mt-1 block w-full h-10 border-2 border-gray-300 rounded-md cursor-pointer">
+                </div>
+
+                <button id="startGameBtn"
+                    class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg transition duration-150">
+                    Mulai Game
+                </button>
+            </div>
+        </div>
+
+        <div id="gameOverScreen" class="game-overlay">
+            <div class="customization-box text-center">
+                <h3 class="text-4xl font-extrabold mb-4 text-red-600">GAME OVER!</h3>
+                <p class="text-xl mb-3 text-gray-700">Skor Anda: <span id="finalScore"
+                        class="font-extrabold text-red-600">0</span></p>
+                <p class="text-sm mb-6 text-gray-500">Bata tersisa: <span id="bricksLeft">0</span></p>
+
+                <button id="restartBtn"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150">
+                    Main Lagi
+                </button>
+            </div>
+        </div>
+
+        <div class="flex justify-between w-full max-w-[480px] mt-4 p-2">
+            <div class="status-display text-2xl font-bold text-gray-700">
+                Skor: <span id="scoreDisplay" class="text-indigo-600">0</span>
+            </div>
+            <div class="status-display text-2xl font-bold text-gray-700">
+                Nyawa: <span id="livesDisplay" class="text-red-600">3</span>
+            </div>
+        </div>
+        <p class="hint-text text-sm text-gray-500 mt-2">Gunakan Tombol Panah Kiri/Kanan, atau Mouse/Sentuhan untuk
+            bergerak!</p>
+    </div>
+
+    <div class="mt-10 p-6 bg-white rounded-xl shadow-lg w-full max-w-lg">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Top 5 Skor "Breakout"</h3>
+        <div id="lastScoresList">
+        </div>
+    </div>
+
+    <script>
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const livesDisplay = document.getElementById('livesDisplay');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const bricksLeftDisplay = document.getElementById('bricksLeft');
+        const restartBtn = document.getElementById('restartBtn');
+        const startGameBtn = document.getElementById('startGameBtn');
+        const usernameInput = document.getElementById('usernameInput');
+        const colorInput = document.getElementById('colorInput');
+        const lastScoresList = document.getElementById('lastScoresList');
+
+        // --- Konstanta Game (Tetap menggunakan nilai Piksel Logis) ---
+        const PADDLE_HEIGHT = 10;
+        const PADDLE_WIDTH = 75;
+        const BALL_RADIUS = 10;
+        const GAME_FPS = 60;
+        const BRICK_ROW_COUNT = 5;
+        const BRICK_COLUMN_COUNT = 8;
+        const BRICK_WIDTH = 50;
+        const BRICK_HEIGHT = 20;
+        const BRICK_PADDING = 10;
+        const BRICK_OFFSET_TOP = 30;
+        const BRICK_OFFSET_LEFT = (canvas.width - (BRICK_COLUMN_COUNT * (BRICK_WIDTH + BRICK_PADDING) - BRICK_PADDING)) / 2;
+
+        let gameLoopInterval;
+        let isGameOver = true;
+        let score = 0;
+        let lives = 3;
+        let gameUsername = 'PemainBreakout';
+        let paddleColor = '#FF8C00';
+
+        // --- Objek Game ---
+        let ball = { x: canvas.width / 2, y: canvas.height - 30, dx: 3, dy: -3 };
+        let paddle = { x: (canvas.width - PADDLE_WIDTH) / 2, dx: 0 };
+        let bricks = [];
+
+        // --- Supabase Functions ---
+
+        async function saveScore(username, color, finalScore) {
+            if (!username) return;
+
+            const { error } = await supabase
+                .from('PublicData')
+                .insert([
+                    {
+                        type: 'Breakout Clone',
+                        username: username,
+                        data: color,
+                        score: finalScore
+                    },
+                ]);
+
+            if (error) {
+                console.error('Error saving score:', error);
+            }
+        }
+
+        async function fetchLastScores() {
+            lastScoresList.innerHTML = '<p class="text-gray-500 text-center">Memuat skor...</p>';
+
+            const { data, error } = await supabase
+                .from('PublicData')
+                .select('username, score, data')
+                .eq('type', 'Breakout Clone')
+                .order('score', { ascending: false })
+                .limit(5);
+
+            if (error) {
+                lastScoresList.innerHTML = `<p class="text-red-500 text-center">Gagal memuat skor: ${error.message.substring(0, 50)}...</p>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                lastScoresList.innerHTML = '<p class="text-gray-500 text-center">Belum ada skor yang tersimpan. Ayo mulai!</p>';
+                return;
+            }
+
+            lastScoresList.innerHTML = '';
+            const ul = document.createElement('ul');
+            ul.className = 'space-y-2 text-left';
+
+            data.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center text-sm font-medium border-b pb-1 last:border-b-0';
+
+                const rank = index + 1;
+                const colorStyle = `style="color: ${item.data || '#000000'}"`;
+
+                li.innerHTML = `
+                    <span class="font-bold text-lg text-gray-700 w-6">${rank}.</span>
+                    <span class="flex-1" style="color: ${item.data || '#000000'}">${item.username}</span>
+                    <span class="text-indigo-600 font-extrabold">${item.score}</span>
+                `;
+                ul.appendChild(li);
+            });
+            lastScoresList.appendChild(ul);
+        }
+
+        // --- Fungsi Rendering dan Logika Kolisi (Sama seperti sebelumnya) ---
+
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = "#333";
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawPaddle() {
+            ctx.fillStyle = paddleColor;
+            ctx.fillRect(paddle.x, canvas.height - PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT);
+        }
+
+        function drawBricks() {
+            bricks.forEach(column => {
+                column.forEach(brick => {
+                    if (brick.status === 1) {
+                        ctx.fillStyle = brick.color;
+                        ctx.fillRect(brick.x, brick.y, BRICK_WIDTH, BRICK_HEIGHT);
+                        ctx.strokeStyle = '#333';
+                        ctx.strokeRect(brick.x, brick.y, BRICK_WIDTH, BRICK_HEIGHT);
+                    }
+                });
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBricks();
+            drawBall();
+            drawPaddle();
+        }
+
+        function generateRandomBricks() {
+            bricks = [];
+            const colorMap = ["#E91E63", "#FFC107", "#00BCD4", "#8BC34A", "#673AB7"];
+
+            for (let c = 0; c < BRICK_COLUMN_COUNT; c++) {
+                bricks[c] = [];
+                for (let r = 0; r < BRICK_ROW_COUNT; r++) {
+                    const brickX = c * (BRICK_WIDTH + BRICK_PADDING) + BRICK_OFFSET_LEFT;
+                    const brickY = r * (BRICK_HEIGHT + BRICK_PADDING) + BRICK_OFFSET_TOP;
+
+                    const status = Math.random() < 0.8 ? 1 : 0;
+
+                    bricks[c][r] = {
+                        x: brickX,
+                        y: brickY,
+                        status: status,
+                        color: colorMap[r % colorMap.length]
+                    };
+                }
+            }
+        }
+
+        function checkBrickCollision() {
+            let bricksCount = 0;
+            for (let c = 0; c < BRICK_COLUMN_COUNT; c++) {
+                for (let r = 0; r < BRICK_ROW_COUNT; r++) {
+                    const brick = bricks[c][r];
+                    if (brick.status === 1) {
+                        bricksCount++;
+
+                        if (ball.x + BALL_RADIUS > brick.x && ball.x - BALL_RADIUS < brick.x + BRICK_WIDTH &&
+                            ball.y + BALL_RADIUS > brick.y && ball.y - BALL_RADIUS < brick.y + BRICK_HEIGHT) {
+
+                            ball.dy = -ball.dy;
+                            brick.status = 0;
+                            score += 10;
+                            scoreDisplay.textContent = score;
+
+                            if (score === initialBricksCount * 10) {
+                                endGame(true);
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+            bricksLeftDisplay.textContent = bricksCount;
+            if (bricksCount === 0) {
+                endGame(true);
+            }
+        }
+
+        function updateBallPosition() {
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Kolisi Dinding (Kiri & Kanan)
+            if (ball.x + ball.dx > canvas.width - BALL_RADIUS || ball.x + ball.dx < BALL_RADIUS) {
+                ball.dx = -ball.dx;
+            }
+
+            // Kolisi Dinding (Atas)
+            if (ball.y + ball.dy < BALL_RADIUS) {
+                ball.dy = -ball.dy;
+            }
+
+            // Kolisi Dinding (Bawah - Game Over)
+            else if (ball.y + ball.dy > canvas.height - BALL_RADIUS) {
+                // Kolisi Paddle
+                if (ball.x > paddle.x && ball.x < paddle.x + PADDLE_WIDTH) {
+                    ball.dy = -ball.dy;
+
+                    // Efek Pantulan Sudut
+                    const centerPoint = paddle.x + PADDLE_WIDTH / 2;
+                    const impactOffset = (ball.x - centerPoint) / (PADDLE_WIDTH / 2);
+                    ball.dx = impactOffset * 5;
+
+                } else {
+                    lives--;
+                    livesDisplay.textContent = lives;
+
+                    if (lives === 0) {
+                        endGame(false);
+                    } else {
+                        // Reset bola dan paddle
+                        ball = { x: canvas.width / 2, y: canvas.height - 30, dx: 3, dy: -3 };
+                        paddle.x = (canvas.width - PADDLE_WIDTH) / 2;
+                    }
+                }
+            }
+
+            // Update Paddle (untuk mouse/touch)
+            paddle.x += paddle.dx;
+            // Batasi Paddle
+            if (paddle.x < 0) paddle.x = 0;
+            if (paddle.x + PADDLE_WIDTH > canvas.width) paddle.x = canvas.width - PADDLE_WIDTH;
+        }
+
+        let initialBricksCount = 0;
+
+        function update() {
+            if (isGameOver) return;
+
+            updateBallPosition();
+            checkBrickCollision();
+            draw();
+        }
+
+        // --- Event Handlers (Keyboard/Touch) ---
+
+        // Keyboard (Panah Kiri/Kanan)
+        document.addEventListener('keydown', (e) => {
+            if (isGameOver) return;
+            if (e.key === 'Right' || e.key === 'ArrowRight') {
+                paddle.dx = 7;
+            } else if (e.key === 'Left' || e.key === 'ArrowLeft') {
+                paddle.dx = -7;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Right' || e.key === 'ArrowRight' || e.key === 'Left' || e.key === 'ArrowLeft') {
+                paddle.dx = 0;
+            }
+        });
+
+        // Mouse/Touch Control (digunakan untuk mobile)
+        function handleMouseMove(e) {
+            if (isGameOver) return;
+
+            // Dapatkan posisi X relatif terhadap canvas. Ini penting untuk mobile.
+            const rect = canvas.getBoundingClientRect();
+            // Scaling faktor (perbandingan lebar Canvas logis dengan lebar CSS/nyata)
+            const scaleX = canvas.width / rect.width;
+
+            // Hitung posisi X relatif terhadap elemen (dari event)
+            let clientX = e.clientX;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+            }
+
+            // Hitung posisi X di dalam konteks Canvas LOGIS (480px)
+            const relativeX = (clientX - rect.left) * scaleX;
+
+            // Atur posisi paddle ke pusat pointer
+            let newPaddleX = relativeX - PADDLE_WIDTH / 2;
+
+            // Batasi gerakan
+            if (newPaddleX < 0) {
+                newPaddleX = 0;
+            } else if (newPaddleX + PADDLE_WIDTH > canvas.width) {
+                newPaddleX = canvas.width - PADDLE_WIDTH;
+            }
+
+            paddle.x = newPaddleX;
+        }
+
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            handleMouseMove(e);
+        });
+
+
+        // --- Flow Game ---
+
+        function startGame() {
+            gameUsername = usernameInput.value.trim() || 'PemainBreakout';
+            paddleColor = colorInput.value;
+            if (gameUsername.length > 20) gameUsername = gameUsername.substring(0, 20);
+
+            isGameOver = false;
+            score = 0;
+            lives = 3;
+            scoreDisplay.textContent = 0;
+            livesDisplay.textContent = 3;
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+
+            // Reset dan Generate Papan
+            ball = { x: canvas.width / 2, y: canvas.height - 30, dx: 3, dy: -3 };
+            paddle = { x: (canvas.width - PADDLE_WIDTH) / 2, dx: 0 };
+            generateRandomBricks();
+
+            // Hitung total bata yang harus dihancurkan
+            initialBricksCount = bricks.flat().filter(b => b.status === 1).length;
+
+            if (gameLoopInterval) clearInterval(gameLoopInterval);
+            gameLoopInterval = setInterval(update, 1000 / GAME_FPS);
+        }
+
+        function endGame(won) {
+            isGameOver = true;
+            clearInterval(gameLoopInterval);
+
+            finalScoreDisplay.textContent = score;
+            const remainingBricks = bricks.flat().filter(b => b.status === 1).length;
+            bricksLeftDisplay.textContent = remainingBricks;
+
+            const h3 = document.querySelector('#gameOverScreen h3');
+            if (won) {
+                h3.textContent = 'SELAMAT, ANDA MENANG!';
+                h3.classList.replace('text-red-600', 'text-green-600');
+            } else {
+                h3.textContent = 'GAME OVER!';
+                h3.classList.replace('text-green-600', 'text-red-600');
+            }
+
+            gameOverScreen.style.display = 'flex';
+
+            saveScore(gameUsername, paddleColor, score);
+            setTimeout(fetchLastScores, 500);
+        }
+
+        // --- Inisialisasi ---
+        startGameBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            generateRandomBricks();
+            draw();
+            fetchLastScores();
+        });
+    </script>
+</body>
+
+</html>

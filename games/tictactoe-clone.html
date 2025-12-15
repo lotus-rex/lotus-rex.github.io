@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe (X & O)</title>
+    <link rel="icon" type="image/png" href="/icon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/icon/favicon.svg" />
+    <link rel="shortcut icon" href="/icon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="LotusRex" />
+    <link rel="manifest" href="/icon/site.webmanifest" />
+    <script defer src="https://cloud.umami.is/script.js"
+        data-website-id="f60d79dd-7473-44c3-99dd-c68242dc95ea"></script>
+    <script src="/script/umami-events.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            width: 306px;
+            /* 3 * 100px + 2 * 3px gap */
+            height: 306px;
+            gap: 3px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #f3f4f6;
+            /* gray-100 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .cell:not(.filled):hover {
+            background-color: #e5e7eb;
+            /* gray-200 */
+        }
+
+        .cell.filled {
+            cursor: default;
+        }
+
+        .winning-cell {
+            background-color: #10b981 !important;
+            /* emerald-500 */
+            color: white !important;
+            transform: scale(1.05);
+        }
+
+        /* Styling for X and O colors */
+        .X {
+            color: #ef4444;
+        }
+
+        /* red-500 */
+        .O {
+            color: #3b82f6;
+        }
+
+        /* blue-500 */
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-lg w-full text-center">
+        <h2 class="text-3xl font-extrabold text-gray-800 mb-2 flex items-center justify-center">
+            <i data-lucide="grid" class="w-8 h-8 mr-2 text-indigo-600"></i> Tic Tac Toe
+        </h2>
+        <p id="statusMessage" class="text-xl font-bold mb-6 text-gray-800">Giliran Pemain X</p>
+
+        <div id="board" class="board mx-auto">
+        </div>
+
+        <button id="resetBtn"
+            class="mt-8 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition duration-150 shadow-md">
+            Mulai Ulang Game
+        </button>
+    </div>
+
+    <script>
+        const boardElement = document.getElementById('board');
+        const statusMessage = document.getElementById('statusMessage');
+        const resetBtn = document.getElementById('resetBtn');
+
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let isGameActive = true;
+
+        const WINNING_CONDITIONS = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Baris
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Kolom
+            [0, 4, 8], [2, 4, 6]             // Diagonal
+        ];
+
+        // --- Logika Utama Game ---
+
+        function handleResultValidation() {
+            let roundWon = false;
+            let winningCells = [];
+
+            for (let i = 0; i < WINNING_CONDITIONS.length; i++) {
+                const winCondition = WINNING_CONDITIONS[i];
+                let a = board[winCondition[0]];
+                let b = board[winCondition[1]];
+                let c = board[winCondition[2]];
+
+                if (a === '' || b === '' || c === '') {
+                    continue; // Lanjut ke kondisi berikutnya
+                }
+                if (a === b && b === c) {
+                    roundWon = true;
+                    winningCells = winCondition;
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                statusMessage.textContent = `🎉 Pemain ${currentPlayer} Menang!`;
+                statusMessage.className = 'text-xl font-extrabold mb-6 text-green-600';
+                isGameActive = false;
+                highlightWinningCells(winningCells);
+                return;
+            }
+
+            // Cek Seri (Draw)
+            if (!board.includes('')) {
+                statusMessage.textContent = `Seri! Tidak ada pemenang.`;
+                statusMessage.className = 'text-xl font-extrabold mb-6 text-gray-600';
+                isGameActive = false;
+                return;
+            }
+
+            // Jika belum ada pemenang, lanjutkan permainan
+            changePlayer();
+        }
+
+        function highlightWinningCells(cells) {
+            cells.forEach(index => {
+                document.getElementById(`cell-${index}`).classList.add('winning-cell');
+            });
+        }
+
+        function changePlayer() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            statusMessage.textContent = `Giliran Pemain ${currentPlayer}`;
+            statusMessage.className = `text-xl font-bold mb-6 ${currentPlayer === 'X' ? 'text-red-500' : 'text-blue-500'}`;
+        }
+
+        function handleCellClick(clickedCell, clickedCellIndex) {
+            if (board[clickedCellIndex] !== '' || !isGameActive) {
+                return;
+            }
+
+            // Update state
+            board[clickedCellIndex] = currentPlayer;
+
+            // Update UI
+            clickedCell.textContent = currentPlayer;
+            clickedCell.classList.add('filled', currentPlayer);
+
+            handleResultValidation();
+        }
+
+        function restartGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            isGameActive = true;
+            statusMessage.textContent = 'Giliran Pemain X';
+            statusMessage.className = 'text-xl font-bold mb-6 text-red-500';
+
+            // Bersihkan UI
+            boardElement.innerHTML = '';
+            createBoard();
+        }
+
+        function createBoard() {
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.setAttribute('data-index', i);
+                cell.id = `cell-${i}`;
+
+                cell.addEventListener('click', () => handleCellClick(cell, i));
+
+                boardElement.appendChild(cell);
+            }
+        }
+
+        // --- Event Listeners & Inisialisasi ---
+        resetBtn.addEventListener('click', restartGame);
+
+        // Mulai Game saat halaman dimuat
+        createBoard();
+        changePlayer(); // Panggil pertama kali untuk menampilkan 'Giliran Pemain X'
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

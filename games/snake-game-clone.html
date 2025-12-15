@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game Klasik</title>
+    <link rel="icon" type="image/png" href="/icon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/icon/favicon.svg" />
+    <link rel="shortcut icon" href="/icon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="LotusRex" />
+    <link rel="manifest" href="/icon/site.webmanifest" />
+    <script defer src="https://cloud.umami.is/script.js"
+        data-website-id="f60d79dd-7473-44c3-99dd-c68242dc95ea"></script>
+    <script src="/script/umami-events.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/script/config.js"></script>
+    <style>
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #gameCanvas {
+            border: 5px solid #333;
+            background-color: #c4f7b6;
+        }
+
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        #gameOverScreen {
+            display: none;
+        }
+
+        .customization-box {
+            max-width: 350px;
+            width: 80%;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        /* --- Kontrol Virtual (D-Pad) --- */
+        #mobileControls {
+            display: none;
+            /* Sembunyikan secara default untuk desktop */
+            width: 200px;
+            height: 200px;
+        }
+
+        @media (max-width: 640px) {
+
+            /* Tampilkan kontrol hanya pada layar kecil */
+            #mobileControls {
+                display: block;
+            }
+
+            /* Sembunyikan petunjuk keyboard pada mobile */
+            .keyboard-hint {
+                display: none;
+            }
+        }
+
+        .control-button {
+            width: 60px;
+            height: 60px;
+            background-color: #38bdf8;
+            /* Sky Blue */
+            color: white;
+            font-size: 24px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            -webkit-user-select: none;
+            box-shadow: 0 4px #0ea5e9;
+            transition: all 0.1s ease;
+        }
+
+        .control-button:active {
+            box-shadow: 0 2px #0ea5e9;
+            transform: translateY(2px);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen game-container p-4">
+
+    <h2 class="text-3xl font-extrabold text-gray-800 mb-4">Snake Game Klasik</h2>
+
+    <div class="relative game-container">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+        <div id="startScreen" class="game-overlay">
+            <div class="customization-box text-center">
+                <h3 class="text-3xl font-extrabold mb-4 text-green-700">MULAI BERMAIN!</h3>
+                <div class="text-left mb-4">
+                    <label for="usernameInput" class="block text-sm font-medium text-gray-700">Username Anda</label>
+                    <input type="text" id="usernameInput" value="PemainUlar" placeholder="Masukkan Nama"
+                        class="mt-1 block w-full p-2 border border-gray-300 rounded-md text-gray-800">
+                </div>
+                <div class="text-left mb-4">
+                    <label for="colorInput" class="block text-sm font-medium text-gray-700">Warna Ular</label>
+                    <input type="color" id="colorInput" value="#4CAF50"
+                        class="mt-1 block w-full h-10 border-2 border-gray-300 rounded-md cursor-pointer">
+                </div>
+                <div class="text-left mb-6">
+                    <label for="borderModeInput" class="block text-sm font-medium text-gray-700">Perilaku
+                        Dinding</label>
+                    <select id="borderModeInput"
+                        class="mt-1 block w-full p-2 border border-gray-300 rounded-md text-gray-800 bg-white">
+                        <option value="die">Mati (Klasik)</option>
+                        <option value="loop">Loop (Teleport)</option>
+                    </select>
+                </div>
+                <button id="startGameBtn"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition duration-150">
+                    Mulai Game
+                </button>
+            </div>
+        </div>
+
+        <div id="gameOverScreen" class="game-overlay">
+            <div class="customization-box text-center">
+                <h3 class="text-4xl font-extrabold mb-4 text-red-600">GAME OVER!</h3>
+                <p class="text-xl mb-6 text-gray-700">Panjang Ular: <span id="finalScore"
+                        class="font-extrabold text-red-600">0</span></p>
+                <button id="restartBtn"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150">
+                    Main Lagi
+                </button>
+            </div>
+        </div>
+
+        <div class="mt-4 text-2xl font-bold text-gray-700">
+            Panjang: <span id="scoreDisplay" class="text-indigo-600">0</span>
+        </div>
+        <p class="text-sm text-gray-500 mt-2 keyboard-hint">Gunakan Tombol Panah (&uarr;&darr;&larr;&rarr;) untuk
+            bergerak.</p>
+    </div>
+
+    <div id="mobileControls" class="mt-8">
+        <div class="flex justify-center">
+            <button class="control-button" data-dir="up">&uarr;</button>
+        </div>
+        <div class="flex justify-center space-x-8 mt-2">
+            <button class="control-button" data-dir="left">&larr;</button>
+            <div class="w-[60px] h-[60px]"></div> <button class="control-button" data-dir="right">&rarr;</button>
+        </div>
+        <div class="flex justify-center mt-2">
+            <button class="control-button" data-dir="down">&darr;</button>
+        </div>
+    </div>
+
+    <div class="mt-10 p-6 bg-white rounded-xl shadow-lg w-full max-w-lg">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Top 5 Skor "Snake Game"</h3>
+        <div id="lastScoresList">
+        </div>
+    </div>
+
+    <script>
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const restartBtn = document.getElementById('restartBtn');
+        const startGameBtn = document.getElementById('startGameBtn');
+        const usernameInput = document.getElementById('usernameInput');
+        const colorInput = document.getElementById('colorInput');
+        const borderModeInput = document.getElementById('borderModeInput');
+        const lastScoresList = document.getElementById('lastScoresList');
+        const mobileControls = document.getElementById('mobileControls'); // Elemen Kontrol BARU
+
+        // --- Konstanta Game ---
+        const GRID_SIZE = 20;
+        const TILE_COUNT = canvas.width / GRID_SIZE;
+        const GAME_SPEED = 150;
+        const FOOD_SYMBOL = '🍎';
+
+        let gameLoopInterval;
+        let isGameOver = true;
+        let score = 0;
+        let gameUsername = 'PemainUlar';
+        let snakeColor = '#4CAF50';
+        let borderMode = 'die';
+
+        // --- Objek Game ---
+        let snake = [];
+        let food = {};
+        let directionX = 0;
+        let directionY = 0;
+        let isChangingDirection = false;
+
+        // --- Supabase Functions ---
+
+        async function saveScore(username, color, finalScore) {
+            // Permintaan: Hanya simpan jika skor (panjang) lebih dari 3
+            if (!username || finalScore <= 3) return;
+
+            const { error } = await supabase
+                .from('PublicData')
+                .insert([
+                    {
+                        type: 'Snake Game',
+                        username: username,
+                        data: color,
+                        score: finalScore
+                    },
+                ]);
+
+            if (error) {
+                console.error('Error saving score:', error);
+            }
+        }
+
+        async function fetchLastScores() {
+            lastScoresList.innerHTML = '<p class="text-gray-500 text-center">Memuat skor...</p>';
+
+            const { data, error } = await supabase
+                .from('PublicData')
+                .select('username, score, data')
+                .eq('type', 'Snake Game')
+                .order('score', { ascending: false })
+                .limit(5);
+
+            if (error) {
+                lastScoresList.innerHTML = `<p class="text-red-500 text-center">Gagal memuat skor: ${error.message.substring(0, 50)}...</p>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                lastScoresList.innerHTML = '<p class="text-gray-500 text-center">Belum ada skor yang tersimpan. Ayo mulai!</p>';
+                return;
+            }
+
+            lastScoresList.innerHTML = '';
+            const ul = document.createElement('ul');
+            ul.className = 'space-y-2 text-left';
+
+            data.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center text-sm font-medium border-b pb-1 last:border-b-0';
+
+                const rank = index + 1;
+                const colorStyle = `style="color: ${item.data || '#000000'}"`;
+
+                li.innerHTML = `
+                    <span class="font-bold text-lg text-gray-700 w-6">${rank}.</span>
+                    <span ${colorStyle} class="flex-1">${item.username}</span>
+                    <span class="text-indigo-600 font-extrabold">${item.score}</span>
+                `;
+                ul.appendChild(li);
+            });
+            lastScoresList.appendChild(ul);
+        }
+
+        // --- Fungsi Game ---
+
+        function generateFood() {
+            let newFood;
+            do {
+                newFood = {
+                    x: Math.floor(Math.random() * TILE_COUNT),
+                    y: Math.floor(Math.random() * TILE_COUNT)
+                };
+            } while (isSnakeCollision(newFood));
+
+            food = newFood;
+        }
+
+        function isSnakeCollision(point) {
+            return snake.some(segment => segment.x === point.x && segment.y === point.y);
+        }
+
+        function drawGame() {
+            // Latar Belakang
+            ctx.fillStyle = '#c4f7b6';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Makanan (Emoji)
+            ctx.font = `${GRID_SIZE}px sans-serif`;
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'left';
+            ctx.fillText(FOOD_SYMBOL, food.x * GRID_SIZE, food.y * GRID_SIZE);
+
+            // Ular
+            snake.forEach((segment, index) => {
+                ctx.fillStyle = snakeColor;
+                ctx.fillRect(segment.x * GRID_SIZE, segment.y * GRID_SIZE, GRID_SIZE - 1, GRID_SIZE - 1);
+            });
+        }
+
+        function updateGame() {
+            if (isGameOver) return;
+
+            isChangingDirection = false;
+
+            const head = snake[0];
+            let newHead = {
+                x: head.x + directionX,
+                y: head.y + directionY
+            };
+
+            // --- Cek Kolisi Dinding & Perilaku ---
+            let collision = false;
+
+            if (borderMode === 'die') {
+                if (newHead.x < 0 || newHead.x >= TILE_COUNT || newHead.y < 0 || newHead.y >= TILE_COUNT) {
+                    collision = true;
+                }
+            } else if (borderMode === 'loop') {
+                // Loop: Teleport ke sisi seberang
+                if (newHead.x < 0) newHead.x = TILE_COUNT - 1;
+                if (newHead.x >= TILE_COUNT) newHead.x = 0;
+                if (newHead.y < 0) newHead.y = TILE_COUNT - 1;
+                if (newHead.y >= TILE_COUNT) newHead.y = 0;
+            }
+
+            if (collision) {
+                endGame();
+                return;
+            }
+
+            // Kolisi Diri Sendiri
+            for (let i = 4; i < snake.length; i++) {
+                if (newHead.x === snake[i].x && newHead.y === snake[i].y) {
+                    endGame();
+                    return;
+                }
+            }
+
+            // Pindahkan Ular
+            snake.unshift(newHead);
+
+            // Cek Makan Makanan
+            if (newHead.x === food.x && newHead.y === food.y) {
+                score = snake.length;
+                scoreDisplay.textContent = score;
+                generateFood();
+            } else {
+                snake.pop();
+            }
+
+            drawGame();
+        }
+
+        function changeDirection(event) {
+            if (isChangingDirection) return;
+
+            // Menerima kode tombol (dari keyboard) atau string arah (dari tombol virtual)
+            let key = typeof event === 'object' ? event.keyCode : event;
+
+            const LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40;
+
+            const goingUp = directionY === -1;
+            const goingDown = directionY === 1;
+            const goingRight = directionX === 1;
+            const goingLeft = directionX === -1;
+
+            if ((key === LEFT || key === 'left') && !goingRight) { directionX = -1; directionY = 0; isChangingDirection = true; }
+            if ((key === UP || key === 'up') && !goingDown) { directionY = -1; directionX = 0; isChangingDirection = true; }
+            if ((key === RIGHT || key === 'right') && !goingLeft) { directionX = 1; directionY = 0; isChangingDirection = true; }
+            if ((key === DOWN || key === 'down') && !goingUp) { directionY = 1; directionX = 0; isChangingDirection = true; }
+        }
+
+        // --- Flow Game ---
+
+        function startGame() {
+            gameUsername = usernameInput.value.trim() || 'PemainUlar';
+            snakeColor = colorInput.value;
+            borderMode = borderModeInput.value;
+            if (gameUsername.length > 20) gameUsername = gameUsername.substring(0, 20);
+
+            isGameOver = false;
+            score = 3;
+            scoreDisplay.textContent = 3;
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+
+            // Inisialisasi Ular
+            snake = [
+                { x: 10, y: 10 },
+                { x: 9, y: 10 },
+                { x: 8, y: 10 }
+            ];
+            directionX = 1;
+            directionY = 0;
+
+            generateFood();
+            drawGame();
+
+            clearInterval(gameLoopInterval);
+            gameLoopInterval = setInterval(updateGame, GAME_SPEED);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            clearInterval(gameLoopInterval);
+
+            finalScoreDisplay.textContent = score;
+            gameOverScreen.style.display = 'flex';
+
+            saveScore(gameUsername, snakeColor, score);
+            setTimeout(fetchLastScores, 500);
+        }
+
+        // --- Event Listeners & Inisialisasi ---
+
+        // Event listener untuk tombol virtual (Mobile)
+        mobileControls.querySelectorAll('.control-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                if (isGameActive && !isGameOver) {
+                    // Panggil changeDirection dengan data-dir (misal: 'up', 'down')
+                    changeDirection(e.currentTarget.getAttribute('data-dir'));
+                }
+            });
+        });
+
+        startGameBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+        document.addEventListener('keydown', changeDirection);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            drawGame();
+            fetchLastScores();
+        });
+
+        // Cek Game Active untuk tombol virtual
+        const isGameActive = () => !isGameOver && startScreen.style.display === 'none';
+    </script>
+</body>
+
+</html>

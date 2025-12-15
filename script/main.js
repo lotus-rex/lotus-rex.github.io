@@ -33,12 +33,14 @@ const StatCard = (title, value, iconName, color) => `
 const pageTitles = {
     dashboard: 'Dashboard Utama',
     tools: 'Tools & Utilities',
+    games: 'Permainan Seru',
     settings: 'Pengaturan Aplikasi'
 };
 
 const pageFiles = {
     dashboard: 'pages/dashboard.html',
     tools: 'pages/tools.html',
+    games: 'pages/games.html',
     settings: 'pages/settings.html'
 };
 
