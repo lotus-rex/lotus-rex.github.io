@@ -19,6 +19,28 @@ function trackUmamiEvent(eventName, details = {}) {
   }
 }
 
+let currentLang = localStorage.getItem('appLang') || 'id';
+
+function updateLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('appLang', lang); // Simpan pilihan user
+
+    // Cari semua elemen yang punya atribut data-i18n
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        
+        // Jika elemen adalah input, ganti placeholder-nya
+        if (el.tagName === 'INPUT') {
+            el.placeholder = i18n[lang][key];
+        } else {
+            // Selain itu ganti textContent-nya
+            el.textContent = i18n[lang][key];
+        }
+        
+    });
+    umami.track('language-change', { language: lang });
+}
+
 const StatCard = (title, value, iconName, color) => `
     <div class="bg-white p-6 rounded-xl shadow-lg flex items-center justify-between transition duration-300 hover:shadow-xl">
         <div>
@@ -70,6 +92,11 @@ async function renderPage(pageKey) {
         if (win) win.opener = null;
         return;
     }
+    if (pageKey === 'keyworder') {
+        const win = window.open('pages/keyword-tool.html', '_blank');
+        if (win) win.opener = null;
+        return;
+    }
     const filePath = pageFiles[pageKey];
     const title = pageTitles[pageKey] || 'Halaman';
 
@@ -80,7 +107,7 @@ async function renderPage(pageKey) {
     history.pushState(null, '', `?${pageKey}`);
     try {
         // 1. Tampilkan loading/placeholder
-        contentArea.innerHTML = `<div class="text-center p-10 text-gray-500">Memuat ${title}...</div>`;
+        contentArea.innerHTML = `<div class="text-center p-10 text-gray-500">Loading ${title}...</div>`;
 
         // 2. Ambil konten dari file terpisah
         const response = await fetch(filePath);
@@ -168,6 +195,7 @@ window.onload = function () {
     // Cek hash URL untuk navigasi langsung, default ke 'dashboard'
     const initialPage = window.location.hash.substring(1) || 'dashboard';
     renderPage(initialPage);
+    updateLanguage(currentLang);
 }
 
 contentArea.addEventListener('click', (e) => {

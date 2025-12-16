@@ -656,7 +656,63 @@ const TimeDriftContent = `
         <p id="timeStatusMessage" class="mt-4 text-center text-sm text-gray-500"></p>
     </div>
 `;
+const ResPresetsContent = `
+    <h2 class="text-2xl font-bold text-indigo-700 mb-4">Resolution Presets</h2>
+    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Kategori Utama</label>
+                <select id="resCategory" class="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-indigo-500 shadow-sm" onchange="loadSubCategories()">
+                    <option value="">-- Pilih Kategori --</option>
+                    <option value="standard_ratios">Rasio Standar (Monitor/Video)</option>
+                    <option value="social_media">Media Sosial (Platform)</option>
+                    <option value="web_ads_google">Iklan Web (Google Ads)</option>
+                    <option value="print_standard">Standar Cetak (Kertas/Foto)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Detail / Rasio</label>
+                <select id="resSubCategory" class="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-indigo-500 shadow-sm" disabled onchange="displayPresets()">
+                    <option value="">-- Pilih Detail --</option>
+                </select>
+            </div>
+        </div>
 
+        <div id="presetDisplayArea" class="hidden animate-fade-in">
+            <h4 id="displayCategoryTitle" class="text-lg font-extrabold text-gray-800 mb-4 border-b pb-2"></h4>
+            <div id="presetItemsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                </div>
+        </div>
+    </div>
+`;
+const ShutterstockKeyworderContent = `
+    <h2 class="text-2xl font-bold text-indigo-700 mb-4">Shutterstock Keyworder</h2>
+    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+        <div class="flex gap-2 mb-6">
+            <input type="text" id="ssSearchInput" class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Contoh: 'indonesian food' atau 'batik pattern'...">
+            <button id="ssSearchBtn" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition font-bold">Cari Aset</button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2">
+                <div id="ssImageResults" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto p-2 border rounded-lg bg-gray-50">
+                    <p class="text-gray-400 text-center col-span-full py-20">Hasil gambar Shutterstock akan muncul di sini</p>
+                </div>
+            </div>
+
+            <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 sticky top-4 h-fit">
+                <h3 class="font-bold text-indigo-900 mb-3 flex justify-between items-center">
+                    Selected Keywords
+                    <span id="ssKwCount" class="text-xs bg-indigo-200 px-2 py-1 rounded">0</span>
+                </h3>
+                <div id="ssSelectedKeywords" class="flex flex-wrap gap-2 mb-4 min-h-[150px] content-start">
+                    <p class="text-xs text-indigo-400">Klik tag pada gambar untuk menambahkan...</p>
+                </div>
+                <button id="ssCopyBtn" class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-bold disabled:opacity-50 transition" disabled>Salin Kata Kunci</button>
+            </div>
+        </div>
+    </div>
+`;
 async function sha1(str) {
     const buffer = new TextEncoder("utf-8").encode(str);
     const hashBuffer = await crypto.subtle.digest("SHA-1", buffer);
@@ -1153,9 +1209,13 @@ function loadTool(toolKey) {
             content = AspectRatioContent;
             pageTitleElement.textContent = 'Aspect Ratio Calculator';
             break;
-            case 'time-drift-checker':
+        case 'time-drift-checker':
             content = TimeDriftContent;
             pageTitleElement.textContent = 'Time Drift Checker';
+            break;
+        case 'resolution-presets':
+            content = ResPresetsContent;
+            pageTitleElement.textContent = 'Resolution Presets';
             break;
         default:
             return;
@@ -1199,6 +1259,8 @@ function loadTool(toolKey) {
         initializeAspectRatioCalculator();
     } else if (toolKey === 'time-drift-checker') {
         initializeTimeDrift();
+    } else if (toolKey === 'resolution-presets') {
+        loadResolutionData();
     }
     trackUmamiEvent('tool_used', { tool: toolKey });
 }
@@ -1208,9 +1270,7 @@ function loadTool(toolKey) {
 // API CONFIGURATION AND BITLY LIMIT LOGIC
 // ===============================================
 
-const BITLY_ACCESS_TOKEN = '2e1bd871a13eab0c8ff6e97d8585965ba124a35c';
 
-// Pengaturan Batasan Bitly
 const MAX_BITLY_COUNT = 10;
 const BITLY_COUNT_KEY = 'bitlyUsageCount';
 const BITLY_DATE_KEY = 'bitlyLastResetDate';
@@ -2573,9 +2633,9 @@ function initializeTimeDrift(containerId) {
     const driftResult = document.getElementById('driftResult');
     const latencyEstimate = document.getElementById('latencyEstimate');
     const statusMessage = document.getElementById('timeStatusMessage');
-    
+
     // API endpoint publik yang cepat untuk mendapatkan waktu server
-    const TIME_API_URL = 'https://worldtimeapi.org/api/ip'; 
+    const TIME_API_URL = 'https://worldtimeapi.org/api/ip';
 
     function formatMs(ms) {
         if (Math.abs(ms) < 1000) {
@@ -2583,12 +2643,12 @@ function initializeTimeDrift(containerId) {
         }
         return `${(ms / 1000).toFixed(2)} s`;
     }
-    
+
     // --- FUNGSI BARU: Update Jam Lokal Real-Time ---
     function updateClock() {
         localTimeDisplay.textContent = new Date().toLocaleTimeString('id-ID', { hour12: false });
     }
-    
+
     // Mulai update jam lokal setiap detik (1000ms)
     let clockInterval = setInterval(updateClock, 1000);
     // Pastikan interval dihentikan jika tool diganti, tetapi karena ini adalah satu file tools.js besar, 
@@ -2607,46 +2667,46 @@ function initializeTimeDrift(containerId) {
         try {
             const response = await fetch(TIME_API_URL);
             if (!response.ok) throw new Error('API server error.');
-            
+
             const data = await response.json();
-            
+
             // 2. Waktu Lokal (T_end) setelah permintaan API selesai
             const T_end = Date.now();
-            
+
             // 3. Waktu Server Online (T_O_Server) (diubah dari detik ke milidetik)
             const T_O_Server = data.unixtime * 1000;
-            
+
             // 4. Hitung Latensi Jaringan (perkiraan satu arah)
             const T_Network = T_end - T_start; // Total waktu pulang-pergi (RTT)
-            const T_Latency = T_Network / 2; 
+            const T_Latency = T_Network / 2;
 
             // 5. Waktu Online yang Disesuaikan (T_O_Adjusted)
             // Ini adalah waktu server yang diperkirakan tiba di PC Anda
-            const T_O_Adjusted = T_O_Server + T_Latency; 
+            const T_O_Adjusted = T_O_Server + T_Latency;
 
             // 6. Hitung Selisih (Drift)
-            const drift = T_end - T_O_Adjusted; 
-            
+            const drift = T_end - T_O_Adjusted;
+
             // --- Tampilkan Hasil ---
-            
+
             // Tampilkan Waktu Server yang Disesuaikan
             onlineTimeDisplay.textContent = new Date(T_O_Adjusted).toLocaleTimeString('id-ID', { hour12: false });
-            
+
             // Tampilkan Selisih Drift
             driftResult.textContent = formatMs(drift);
-            
+
             const driftAbs = Math.abs(drift);
             driftResult.className = `text-3xl font-extrabold font-mono mt-1 ${driftAbs < 500 ? 'text-green-700' : 'text-red-700'}`;
-            
+
             // Tampilkan Detail Latensi
             latencyEstimate.textContent = `Latensi Jaringan (total waktu RTT): ${formatMs(T_Network)}.`;
 
             if (driftAbs < 500) {
                 statusMessage.textContent = '✅ Jam Anda sangat akurat (selisih di bawah 500 ms).';
             } else if (drift > 0) {
-                 statusMessage.textContent = `⚠️ Jam Anda ${formatMs(drift)} lebih cepat dari waktu server.`;
+                statusMessage.textContent = `⚠️ Jam Anda ${formatMs(drift)} lebih cepat dari waktu server.`;
             } else {
-                 statusMessage.textContent = `⚠️ Jam Anda ${formatMs(Math.abs(drift))} lebih lambat dari waktu server.`;
+                statusMessage.textContent = `⚠️ Jam Anda ${formatMs(Math.abs(drift))} lebih lambat dari waktu server.`;
             }
 
         } catch (error) {
@@ -2660,10 +2720,134 @@ function initializeTimeDrift(containerId) {
     }
 
     checkTimeBtn.addEventListener('click', checkTimeDrift);
-    
+
     // Panggil update clock saat inisialisasi untuk display awal
-    updateClock(); 
-    
+    updateClock();
+
     // Otomatis cek saat pertama kali dimuat
-    checkTimeDrift(); 
+    checkTimeDrift();
+}
+let resData = null;
+
+async function loadResolutionData() {
+    try {
+        const response = await fetch('/db/res-presets.json');
+        const json = await response.json();
+        resData = json.resolution_presets;
+    } catch (error) {
+        console.error("Gagal memuat preset resolusi:", error);
+    }
+}
+
+function loadSubCategories() {
+    const mainCat = document.getElementById('resCategory').value;
+    const subSelect = document.getElementById('resSubCategory');
+    const displayArea = document.getElementById('presetDisplayArea');
+
+    subSelect.innerHTML = '<option value="">-- Pilih Detail --</option>';
+    displayArea.classList.add('hidden');
+
+    if (!mainCat || !resData || !resData[mainCat]) {
+        subSelect.disabled = true;
+        return;
+    }
+
+    subSelect.disabled = false;
+    const data = resData[mainCat];
+
+    // LOGIKA KHUSUS: web_ads_google (Array langsung)
+    if (mainCat === 'web_ads_google') {
+        subSelect.innerHTML = '<option value="direct">Semua Ukuran Standar</option>';
+        subSelect.value = "direct";
+        subSelect.disabled = true; // Kunci karena tidak butuh pilihan lagi
+        displayPresets(); // Langsung tampilkan
+        return;
+    }
+
+    subSelect.disabled = false;
+    // LOGIKA PERBAIKAN: Cek apakah data berupa Array (untuk standard_ratios)
+    if (Array.isArray(data)) {
+        data.forEach((item, index) => {
+            const opt = document.createElement('option');
+            // Simpan INDEX sebagai value agar displayPresets tidak bingung
+            opt.value = index;
+            opt.textContent = mainCat === 'standard_ratios'
+                ? `Rasio ${item.ratio} (${item.category})`
+                : (item.name || `Preset ${index + 1}`);
+            subSelect.appendChild(opt);
+        });
+    } else {
+        // Untuk data berupa Objek (social_media, print_standard)
+        Object.keys(data).forEach(key => {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = key.replace(/_/g, ' ').toUpperCase();
+            subSelect.appendChild(opt);
+        });
+    }
+}
+
+function displayPresets() {
+    const mainCat = document.getElementById('resCategory').value;
+    const subValue = document.getElementById('resSubCategory').value;
+    const listContainer = document.getElementById('presetItemsList');
+    const titleArea = document.getElementById('displayCategoryTitle');
+    const displayArea = document.getElementById('presetDisplayArea');
+
+    if (subValue === "" || !resData[mainCat]) {
+        displayArea.classList.add('hidden');
+        return;
+    }
+
+    listContainer.innerHTML = '';
+    displayArea.classList.remove('hidden');
+
+    let items = [];
+    let title = "";
+
+    // LOGIKA PERBAIKAN: Cara mengambil data berdasarkan kategori
+    if (mainCat === 'standard_ratios') {
+        // Ambil berdasarkan index array
+        const selectedData = resData[mainCat][subValue];
+        if (selectedData) {
+            items = selectedData.sizes;
+            title = `Standard ${selectedData.ratio} - ${selectedData.category}`;
+        }
+    } else if (mainCat === 'web_ads_google') {
+        // web_ads_google adalah array langsung
+        items = resData[mainCat];
+        title = "Google Web Ads Standard";
+    } else {
+        // social_media dan print_standard (Objek)
+        items = resData[mainCat][subValue] || [];
+        title = subValue.replace(/_/g, ' ').toUpperCase();
+    }
+
+    titleArea.textContent = title;
+
+    if (items.length === 0) {
+        listContainer.innerHTML = '<p class="text-gray-500 col-span-full text-center py-4">Tidak ada data untuk kategori ini.</p>';
+        return;
+    }
+
+    items.forEach(item => {
+        // Tentukan unit (Inchi untuk foto, MM untuk kertas ISO, selain itu PX)
+        let unit = ' px';
+        if (subValue === 'photo_inches') unit = '"';
+        if (subValue === 'iso_paper_mm') unit = ' mm';
+
+        const card = document.createElement('div');
+        card.className = "bg-gray-50 border border-gray-200 p-4 rounded-lg hover:border-indigo-300 transition shadow-sm group";
+
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-1">
+                <span class="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter">${item.ratio || title.split(' ')[0]}</span>
+            </div>
+            <h5 class="font-bold text-gray-800 text-sm truncate" title="${item.name}">${item.name}</h5>
+            <p class="text-xl font-mono font-bold text-indigo-700 mt-1">
+                ${item.width}<span class="text-gray-400 text-xs mx-1">x</span>${item.height}<span class="text-xs font-normal text-gray-500">${unit}</span>
+            </p>
+        `;
+        listContainer.appendChild(card);
+    });
 }

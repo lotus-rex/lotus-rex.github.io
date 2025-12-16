@@ -1,0 +1,146 @@
+{
+  "resolution_presets": {
+    "standard_ratios": [
+      {
+        "ratio": "16:9",
+        "category": "Widescreen (HDTV / Web)",
+        "sizes": [
+          {"name": "HD", "width": 1280, "height": 720},
+          {"name": "Full HD", "width": 1920, "height": 1080},
+          {"name": "QHD (2K)", "width": 2560, "height": 1440},
+          {"name": "4K UHD", "width": 3840, "height": 2160}
+        ]
+      },
+      {
+        "ratio": "21:9",
+        "category": "Ultrawide (Cinema Scope)",
+        "sizes": [
+          {"name": "WFHD", "width": 2560, "height": 1080},
+          {"name": "WQHD", "width": 3440, "height": 1440},
+          {"name": "5K Ultrawide", "width": 5120, "height": 2160}
+        ]
+      },
+      {
+        "ratio": "2.39:1",
+        "category": "Anamorphic Cinema (Layar Lebar Bioskop)",
+        "sizes": [
+          {"name": "DCI 2K", "width": 2048, "height": 858},
+          {"name": "DCI 4K", "width": 4096, "height": 1716}
+        ]
+      },
+      {
+        "ratio": "1.85:1",
+        "category": "Standard Cinema (U.S. Widescreen)",
+        "sizes": [
+          {"name": "DCI 2K", "width": 1998, "height": 1080},
+          {"name": "DCI 4K", "width": 3996, "height": 2160}
+        ]
+      },
+      {
+        "ratio": "3:2",
+        "category": "Photography (DSLR / Mirrorless Full Frame)",
+        "sizes": [
+          {"name": "Standard Photo", "width": 1080, "height": 720},
+          {"name": "Print High-Res", "width": 3000, "height": 2000},
+          {"name": "Microsoft Surface Screen", "width": 3000, "height": 2000}
+        ]
+      },
+      {
+        "ratio": "4:3",
+        "category": "Legacy Monitor / iPad / Tablet",
+        "sizes": [
+          {"name": "VGA", "width": 640, "height": 480},
+          {"name": "iPad Pro 11-inch", "width": 2388, "height": 1668},
+          {"name": "iPad Pro 12.9-inch", "width": 2732, "height": 2048}
+        ]
+      },
+      {
+        "ratio": "16:10",
+        "category": "Productivity (MacBook / Business Monitor)",
+        "sizes": [
+          {"name": "WXGA", "width": 1280, "height": 800},
+          {"name": "WUXGA", "width": 1920, "height": 1200},
+          {"name": "Retina Display (Approx)", "width": 2560, "height": 1600}
+        ]
+      },
+      {
+        "ratio": "9:16",
+        "category": "Vertical Video (Mobile)",
+        "sizes": [
+          {"name": "Story HD", "width": 720, "height": 1280},
+          {"name": "Story Full HD", "width": 1080, "height": 1920}
+        ]
+      },
+      {
+        "ratio": "1:1",
+        "category": "Square (Social Media)",
+        "sizes": [
+          {"name": "Low Res", "width": 512, "height": 512},
+          {"name": "High Res", "width": 1080, "height": 1080}
+        ]
+      }
+    ],
+    "social_media": {
+      "instagram": [
+        {"name": "Post Square", "width": 1080, "height": 1080, "ratio": "1:1"},
+        {"name": "Post Portrait", "width": 1080, "height": 1350, "ratio": "4:5"},
+        {"name": "Post Landscape", "width": 1080, "height": 608, "ratio": "1.91:1"},
+        {"name": "Story / Reels / IGTV", "width": 1080, "height": 1920, "ratio": "9:16"}
+      ],
+      "tiktok": [
+        {"name": "Video", "width": 1080, "height": 1920, "ratio": "9:16"},
+        {"name": "Profile Picture", "width": 200, "height": 200, "ratio": "1:1"}
+      ],
+      "facebook": [
+        {"name": "Profile Picture", "width": 170, "height": 170, "ratio": "1:1"},
+        {"name": "Cover Photo", "width": 820, "height": 312, "ratio": "20.5:7.8"},
+        {"name": "Shared Post", "width": 1200, "height": 630, "ratio": "1.91:1"},
+        {"name": "Event Cover", "width": 1200, "height": 628, "ratio": "2:1"}
+      ],
+      "youtube": [
+        {"name": "Thumbnail", "width": 1280, "height": 720, "ratio": "16:9"},
+        {"name": "Channel Banner", "width": 2560, "height": 1440, "ratio": "16:9"},
+        {"name": "Shorts", "width": 1080, "height": 1920, "ratio": "9:16"}
+      ],
+      "twitter_x": [
+        {"name": "Header Photo", "width": 1500, "height": 500, "ratio": "3:1"},
+        {"name": "Post Image", "width": 1200, "height": 675, "ratio": "16:9"}
+      ],
+      "linkedin": [
+        {"name": "Profile Cover", "width": 1584, "height": 396, "ratio": "4:1"},
+        {"name": "Company Logo", "width": 300, "height": 300, "ratio": "1:1"},
+        {"name": "Business Post", "width": 1200, "height": 627, "ratio": "1.91:1"}
+      ],
+      "twitch": [
+        {"name": "Profile Banner", "width": 1200, "height": 480, "ratio": "5:2"},
+        {"name": "Video Player Banner", "width": 1920, "height": 1080, "ratio": "16:9"}
+      ]
+    },
+    "web_ads_google": [
+      {"name": "Leaderboard", "width": 728, "height": 90},
+      {"name": "Large Rectangle", "width": 336, "height": 280},
+      {"name": "Medium Rectangle", "width": 300, "height": 250},
+      {"name": "Skyscraper", "width": 120, "height": 600},
+      {"name": "Half Page Ad", "width": 300, "height": 600}
+    ],
+    "print_standard": {
+      "iso_paper_mm": [
+        {"name": "A0", "width": 841, "height": 1189},
+        {"name": "A1", "width": 594, "height": 841},
+        {"name": "A2", "width": 420, "height": 594},
+        {"name": "A3", "width": 297, "height": 420},
+        {"name": "A4", "width": 210, "height": 297},
+        {"name": "A5", "width": 148, "height": 210},
+        {"name": "F4 / Folio", "width": 215, "height": 330}
+      ],
+      "photo_inches": [
+        {"name": "3R", "width": 3.5, "height": 5},
+        {"name": "4R", "width": 4, "height": 6},
+        {"name": "10R", "width": 10, "height": 12},
+        {"name": "Poster Small", "width": 11, "height": 17},
+        {"name": "Poster Medium", "width": 18, "height": 24},
+        {"name": "Poster Large", "width": 24, "height": 36}
+      ]
+    }
+  }
+}
