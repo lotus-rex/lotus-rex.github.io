@@ -15,7 +15,7 @@
     <link rel="manifest" href="/icon/site.webmanifest" />
     <script defer src="https://cloud.umami.is/script.js"
         data-website-id="f60d79dd-7473-44c3-99dd-c68242dc95ea"></script>
-    <script src="/script/umami-events.js" defer></script>
+    <script src="/script/umami-events.js"></script>
     <script src="/script/config.js"></script>
     <style>
         .custom-scrollbar::-webkit-scrollbar {
@@ -89,9 +89,15 @@
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
             <div class="flex flex-col gap-4">
                 <div class="flex flex-col md:flex-row gap-3">
+                    <select id="searchType"
+                        class="hidden p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 min-w-[140px]">
+                        <option value="query">Keyword</option>
+                        <option value="id">Image ID</option>
+                    </select>
+
                     <input type="text" id="searchInput"
                         class="flex-1 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none text-lg font-medium"
-                        placeholder="Try using operators: indonesia AND island, dog OR cat, batik NOT cloth...">
+                        placeholder="Try using operators: indonesia AND island, dog OR cat, batik NOT cloth, or Image ID">
 
                     <button id="searchBtn"
                         class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-10 rounded-xl transition-all shadow-lg shadow-indigo-100">
@@ -132,6 +138,7 @@
                             class="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="popular">Popular</option>
                             <option value="newest">Newest</option>
+                            <option value="oldest">Oldest</option>
                             <option value="relevance">Relevance</option>
                             <option value="random">Random</option>
                         </select>
@@ -145,6 +152,16 @@
                             <option value="video">Video</option>
                         </select>
                     </div>
+
+                    <div class="hidden md:col-span-3">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Contributor
+                            (Optional)</label>
+                        <input type="text" id="contributorFilter"
+                            class="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder="Filter by contributor name (e.g., John Doe)">
+
+                    </div>
+                    
                 </div>
             </div>
         </div>
@@ -242,57 +259,49 @@
     </div>
 
     <script>
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        if (typeof supabaseClient === 'undefined') {
+            var supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
 
         let selectedTagsSet = new Set();
         let currentSearchData = [];
 
-        async function fetchShutterstock(query, imageType) {
-            const { data, error } = await supabase.functions.invoke('shutterstock-search', {
-                body: {
-                    query: query,
-                    image_type: imageType, // Kirim tipe ke Edge Function
-                    per_page: 24
-                }
-            });
-            if (error) throw new Error('Failed to retrieve data');
-            return data;
-        }
-
-        const searchBtn = document.getElementById('searchBtn');
-        const searchInput = document.getElementById('searchInput');
-        const resultsGrid = document.getElementById('resultsGrid');
-
-
-        function toggleAdvanced() {
+        
+        window.toggleAdvanced = function () {
             const panel = document.getElementById('advancedPanel');
             const icon = document.getElementById('advIcon');
-            panel.classList.toggle('hidden');
-            icon.classList.toggle('rotate-180');
-        }
+            if (panel && icon) {
+                panel.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
+            }
+        };
 
         async function performSearch() {
-            const searchInput = document.getElementById('searchInput');
+            const searchInputEl = document.getElementById('searchInput');
+            const searchType = document.getElementById('searchType').value;
+            const contributor = document.getElementById('contributorFilter').value.trim();
             const searchBtn = document.getElementById('searchBtn');
-            const btnText = document.getElementById('btnText'); // Ambil referensi di sini
+            const btnText = document.getElementById('btnText');
             const resultsGrid = document.getElementById('resultsGrid');
 
-            const query = searchInput.value.trim();
-            if (!query) return;
+            // Ambil nilai teks
+            const queryValue = searchInputEl.value.trim();
 
-            // Ambil semua tipe yang diceklis
+            if (!queryValue) return;
+
             const selectedTypes = Array.from(document.querySelectorAll('.type-cb:checked')).map(cb => cb.value);
             const sort = document.getElementById('sortFilter').value;
             const media = document.getElementById('mediaFilter').value;
 
-
             searchBtn.disabled = true;
-            if(btnText) btnText.textContent ='Searching...';
+            if (btnText) btnText.textContent = 'Searching...';
 
             try {
-                const { data, error } = await supabase.functions.invoke('shutterstock-search', {
+                const { data, error } = await supabaseClient.functions.invoke('shutterstock-search', {
                     body: {
-                        query: query,
+                        query: searchType === 'query' ? queryValue : null,
+                        image_id: searchType === 'id' ? queryValue : null,
+                        contributor: contributor || null,
                         image_types: selectedTypes,
                         sort: sort,
                         media_type: media
@@ -303,12 +312,15 @@
                 currentSearchData = data.data;
                 renderResults(data.data);
             } catch (err) {
+                console.error(err);
                 resultsGrid.innerHTML = `<div class="col-span-full text-red-500 text-center p-10 bg-red-50 rounded-2xl border border-red-100 font-bold">Error: ${err.message}</div>`;
             } finally {
                 searchBtn.disabled = false;
                 if (btnText) btnText.textContent = 'Search Now';
             }
-            trackUmamiEvent('shutterstock-search', { query: query, types: selectedTypes.join(','), sort: sort, media: media });
+            if (typeof trackUmamiEvent === 'function') {
+                trackUmamiEvent('shutterstock-search', { query: queryValue, types: selectedTypes.join(','), sort: sort, media: media });
+            }
         }
 
         searchInput.onkeypress = (e) => { if (e.key === 'Enter') performSearch(); };
@@ -342,7 +354,7 @@
                         `).join('')}
                     </div>
                     <button onclick="addAllTags(${idx})" class="mt-auto w-full text-[11px] font-extrabold uppercase tracking-wider text-indigo-600 py-2.5 bg-indigo-50 rounded-xl hover:bg-indigo-600 hover:text-white transition-all">
-                        + Ambil Semua (${img.keywords.length})
+                        + Take All (${img.keywords.length})
                     </button>
                 </div>
             `;
@@ -404,12 +416,18 @@
         const modal = document.getElementById('metaModal');
         window.openModal = (idx) => {
             const img = currentSearchData[idx];
+            const types = {
+                'image': 'Photo',
+                'vector': 'Vector',
+                'illustration': 'Illustration',
+                'video': 'Video'
+            };
             document.getElementById('modalImg').src = img.assets.preview.url;
             document.getElementById('modalTitle').textContent = img.description;
             document.getElementById('modalId').textContent = `ID: ${img.id}`;
             document.getElementById('modalCat').textContent = img.categories?.[0]?.name || 'Uncategorized';
-            document.getElementById('modalType').textContent = img.media_type;
-            document.getElementById('modalLink').href = `https://www.shutterstock.com/image-photo/${img.id}`;
+            document.getElementById('modalType').textContent = types[img.media_type] || img.media_type;
+            document.getElementById('modalLink').href = `https://www.shutterstock.com/image-${types[img.media_type].toLowerCase()}/${img.id}`;
 
             const tagContainer = document.getElementById('modalTags');
             tagContainer.innerHTML = img.keywords.map(kw =>
@@ -419,8 +437,28 @@
             document.getElementById('modalAddAll').onclick = () => { addAllTags(idx); closeModal(); };
             modal.classList.remove('hidden');
         };
-
+        function trackUmamiEvent(eventName, details = {}) {
+            try {
+                if (window.umami && typeof window.umami.track === 'function') {
+                    window.umami.track(eventName, details);
+                    console.log('[Umami]', eventName, details);
+                } else {
+                    console.warn('[Umami] Tracker not loaded yet');
+                }
+            } catch (err) {
+                console.error('[Umami] Tracking failed', err);
+            }
+        }
         window.closeModal = () => modal.classList.add('hidden');
+        document.addEventListener('DOMContentLoaded', () => {
+            const sBtn = document.getElementById('searchBtn');
+            const sInput = document.getElementById('searchInput');
+
+            if (sBtn) sBtn.onclick = performSearch;
+            if (sInput) {
+                sInput.onkeypress = (e) => { if (e.key === 'Enter') performSearch(); };
+            }
+        });
     </script>
 </body>
 
